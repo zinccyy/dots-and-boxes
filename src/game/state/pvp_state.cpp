@@ -155,9 +155,13 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
             else
             {
                 // check if able to connect
-                if ((mPickedDot->Position.x == mConnectDot->Position.x && mPickedDot->Position.y != mConnectDot->Position.y) ||
-                    ((mPickedDot->Position.y == mConnectDot->Position.y && mPickedDot->Position.x != mConnectDot->Position.x)))
+                if ((mPickedDot->Position.x == mConnectDot->Position.x && mPickedDot->Position.y != mConnectDot->Position.y &&
+                     glm::abs(mPickedDot->Position.y - mConnectDot->Position.y) <= mDotsDistance.y) ||
+                    ((mPickedDot->Position.y == mConnectDot->Position.y && mPickedDot->Position.x != mConnectDot->Position.x &&
+                      glm::abs(mPickedDot->Position.x - mConnectDot->Position.x) <= mDotsDistance.x)))
                 {
+                    utils::log::debug("dots distance: %f", mDotsDistance.y);
+                    utils::log::debug("dots real distance: %f", glm::abs(mPickedDot->Position.y - mConnectDot->Position.y));
                     utils::log::debug("normal line - adding fully to the collection");
 
                     mNewLine->EndPosition = mConnectDot->Position;
@@ -240,6 +244,8 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
     const auto start_point_w = step_w - step_w / 2;
     const auto start_point_h = step_h - step_h / 2;
 
+    mDotsDistance = glm::vec2(start_point_w, start_point_h);
+
     for (int i = 0; i < 3; i++)
     {
         auto w2 = start_point_w + i * start_point_w;
@@ -248,6 +254,11 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
             auto h2 = start_point_h + j * start_point_h;
             mDots[i][j].Position = glm::vec2(w2, h2);
         }
+    }
+
+    for (auto &line : mLines)
+    {
+        line->updatePositions();
     }
 }
 eng::draw::Dot *PlayerVsPlayerState::mGetHoveredDot()

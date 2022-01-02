@@ -49,6 +49,9 @@ class PlayerVsPlayerState : public State
     // dot to connect with picked dot - once the mouse was released
     eng::draw::Dot *mConnectDot;
 
+    // separate distances for the dots - x and y values
+    glm::vec2 mDotsDistance;
+
     // shaders
     utils::gl::ShaderProgram mDotShaderProgram;
     utils::gl::ShaderProgram mLineShaderProgram;
