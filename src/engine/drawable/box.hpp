@@ -12,7 +12,7 @@ class Box : public IDrawable
     Box();
 
     int setupBuffers() override;
-    void draw(gl::ShaderProgram &program) override;
+    void draw(gl::ShaderProgram &program, const glm::vec2 &win_size) override;
 
   private:
     // position of the dot

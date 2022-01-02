@@ -36,7 +36,7 @@ struct Dot : public IDrawable
     Dot();
 
     int setupBuffers() override;
-    void draw(gl::ShaderProgram &program) override;
+    void draw(gl::ShaderProgram &program, const glm::vec2 &win_size) override;
 
     ~Dot();
 };

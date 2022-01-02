@@ -28,7 +28,7 @@ vec4 circle(vec2 pos) {
     if(uSmoothstep) {
         if(len <= uOuterRadius) {
             if(uHovered) {
-                return mix(innerColor * 0.8, outerColor, smoothstep(uInnerRadius, uOuterRadius, len));
+                return mix(mix(innerColor, vec4(rgb(vec3(190,190,190)), 1), 0.9), outerColor, smoothstep(uInnerRadius, uOuterRadius, len));
             } else {
                 return mix(innerColor, outerColor, smoothstep(uInnerRadius, uOuterRadius, len));
             }

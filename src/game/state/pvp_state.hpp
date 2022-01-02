@@ -4,10 +4,13 @@
 
 #include <engine/drawable/box.hpp>
 #include <engine/drawable/dot.hpp>
+#include <engine/drawable/line.hpp>
 
 #include <utils/gl/shader_program.hpp>
 
 #include <array>
+#include <vector>
+#include <memory>
 
 namespace gm
 {
@@ -34,6 +37,12 @@ class PlayerVsPlayerState : public State
     // playing field
     std::array<std::array<eng::draw::Dot, 3>, 3> mDots;
 
+    // draw lines
+    std::vector<eng::draw::Line *> mLines;
+
+    // currently drawn line - the one trying to connect the dots
+    eng::draw::Line *mNewLine;
+
     // dot where the mouse was pressed and is trying to connect with the other dot
     eng::draw::Dot *mPickedDot;
 
@@ -42,6 +51,7 @@ class PlayerVsPlayerState : public State
 
     // shaders
     utils::gl::ShaderProgram mDotShaderProgram;
+    utils::gl::ShaderProgram mLineShaderProgram;
 };
 } // namespace state
 } // namespace gm

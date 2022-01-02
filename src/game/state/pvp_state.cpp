@@ -2,21 +2,22 @@
 #include <SDL_video.h>
 #include <game/state/pvp_state.hpp>
 
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/geometric.hpp>
 #include <utils/log.hpp>
+#include <utils/gl/gl.hpp>
 
 #include <game/game.hpp>
 
 #include <iostream>
 
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/geometric.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 namespace gm
 {
 namespace state
 {
-PlayerVsPlayerState::PlayerVsPlayerState(Game *game) : State(game)
+PlayerVsPlayerState::PlayerVsPlayerState(Game *game) : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr)
 {
 }
 int PlayerVsPlayerState::init()
@@ -35,16 +36,15 @@ int PlayerVsPlayerState::init()
             }
 
             // other stuff
-            mDots[i][j].Size = 20;
+            mDots[i][j].Size = 10;
             mDots[i][j].Hovered = false;
             mDots[i][j].Smoothstep = true;
-            mDots[i][j].InnerColor = glm::vec3(242, 197, 149);
+            mDots[i][j].InnerColor = utils::gl::parseHexRGB("#f2c595");
             mDots[i][j].OuterColor = glm::vec3(120, 120, 120);
             mDots[i][j].InnerRadius = 0.7;
             mDots[i][j].OuterRadius = 1;
         }
     }
-
     mRecalculateDotsPositions(glm::vec2(800, 600));
 
     utils::log::debug("loaded objects");
@@ -52,7 +52,14 @@ int PlayerVsPlayerState::init()
     error = mDotShaderProgram.loadShadersFromSource("assets/shaders/default/dot/vert.glsl", "assets/shaders/default/dot/frag.glsl");
     if (error)
     {
-        utils::log::error("unable to load default shaders");
+        utils::log::error("unable to load default dot shaders");
+        return -1;
+    }
+
+    error = mLineShaderProgram.loadShadersFromSource("assets/shaders/default/line/vert.glsl", "assets/shaders/default/line/frag.glsl");
+    if (error)
+    {
+        utils::log::error("unable to load default line shaders");
         return -1;
     }
 
@@ -79,7 +86,8 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
         auto x = event.motion.x;
         auto y = event.motion.y;
 
-        utils::log::debug("mouse: %d:%d", x, y);
+        auto xrel = event.motion.xrel;
+        auto yrel = event.motion.yrel;
 
         for (int i = 0; i < 3; i++)
         {
@@ -95,28 +103,92 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
                 }
             }
         }
+        if (mNewLine && mPickedDot && !mConnectDot)
+        {
+            mNewLine->EndPosition = glm::vec2(event.motion.x, event.motion.y);
+        }
     }
     else if (event.type == SDL_MOUSEBUTTONDOWN)
     {
         // mouse pressed -> check for the hovered dot and draw a line from that dot up until the mouse position
+        utils::log::debug("mouse down");
         mPickedDot = mGetHoveredDot();
+        if (mPickedDot != nullptr)
+        {
+            // append new line to the vector and use back() to fetch last line - currently drawn one
+            mNewLine = new eng::draw::Line();
+
+            utils::log::debug("adding new line");
+            utils::log::debug("setting line buffers");
+            mNewLine->setupBuffers();
+
+            if (error)
+            {
+                utils::log::debug("unable to setup line buffers");
+                return -1;
+            }
+            utils::log::debug("setting properties");
+
+            mNewLine->Height = 2;
+            mNewLine->ConnectedDots.first = mPickedDot;
+            mNewLine->StartPosition = mNewLine->EndPosition = mPickedDot->Position;
+        }
     }
     else if (event.type == SDL_MOUSEBUTTONUP)
     {
         // mouse released -> check for hovered dot and connect if possible the picked and connect dots
+        utils::log::debug("mouse up");
         mConnectDot = mGetHoveredDot();
-        if (mConnectDot != nullptr)
+        if (mConnectDot != nullptr && mPickedDot != nullptr)
         {
+            utils::log::debug("picked + connect valid - setting positions");
             if (mPickedDot->Position == mConnectDot->Position)
             {
                 // same dot -> do nothing, just release
                 mPickedDot = nullptr;
                 mConnectDot = nullptr;
+
+                utils::log::debug("same dot - ignore");
+                delete mNewLine;
+                mNewLine = nullptr;
             }
             else
             {
                 // check if able to connect
+                if ((mPickedDot->Position.x == mConnectDot->Position.x && mPickedDot->Position.y != mConnectDot->Position.y) ||
+                    ((mPickedDot->Position.y == mConnectDot->Position.y && mPickedDot->Position.x != mConnectDot->Position.x)))
+                {
+                    utils::log::debug("normal line - adding fully to the collection");
+
+                    mNewLine->EndPosition = mConnectDot->Position;
+                    mNewLine->ConnectedDots.second = mConnectDot;
+                    mLines.push_back(mNewLine);
+                    mNewLine = nullptr;
+                }
+                else
+                {
+                    utils::log::debug("unable to connect cross");
+                    delete mNewLine;
+                    mNewLine = nullptr;
+                }
+
+                mPickedDot = nullptr;
+                mConnectDot = nullptr;
             }
+        }
+        else if (mPickedDot != nullptr)
+        {
+            mPickedDot = nullptr;
+            mConnectDot = nullptr;
+            delete mNewLine;
+            mNewLine = nullptr;
+        }
+        else if (mConnectDot != nullptr)
+        {
+            mPickedDot = nullptr;
+            mConnectDot = nullptr;
+            delete mNewLine;
+            mNewLine = nullptr;
         }
     }
 
@@ -142,20 +214,18 @@ int PlayerVsPlayerState::draw()
     {
         for (int j = 0; j < 3; j++)
         {
-            auto scale = glm::scale(glm::mat4(1), glm::vec3(glm::vec2(mDots[i][j].Size) / win_size, 0));
-            auto translate = glm::translate(glm::mat4(1), glm::vec3(glm::vec2(mDots[i][j].Position.x * 2.0f - win_size.x, -mDots[i][j].Position.y * 2.0f + win_size.y) / (win_size), 0));
-
-            mDotShaderProgram.use();
-            mDotShaderProgram.setUniform("uScale", scale);
-            mDotShaderProgram.setUniform("uTranslate", translate);
-
-            mDots[i][j].draw(mDotShaderProgram);
+            mDots[i][j].draw(mDotShaderProgram, win_size);
         }
     }
 
-    if (mPickedDot != nullptr)
+    for (auto &line : mLines)
     {
-        // draw a line
+        line->draw(mLineShaderProgram, win_size);
+    }
+
+    if (mNewLine != nullptr)
+    {
+        mNewLine->draw(mLineShaderProgram, win_size);
     }
 
     return error;
@@ -200,6 +270,15 @@ eng::draw::Dot *PlayerVsPlayerState::mGetHoveredDot()
 }
 PlayerVsPlayerState::~PlayerVsPlayerState()
 {
+    for (auto &line : mLines)
+    {
+        delete line;
+    }
+    if (mNewLine)
+    {
+        delete mNewLine;
+        mNewLine = nullptr;
+    }
 }
 } // namespace state
 } // namespace gm

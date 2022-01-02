@@ -24,6 +24,7 @@ add_executable(
 
     # utils/gl
     "src/utils/gl/shader_program.cpp"
+    "src/utils/gl/gl.cpp"
 
     # game/state
     "src/game/state/main_menu.cpp"

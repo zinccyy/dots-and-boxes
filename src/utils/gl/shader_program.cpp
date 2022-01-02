@@ -13,9 +13,6 @@ int ShaderProgram::loadShadersFromSource(const char *vShaderPath, const char *fS
     auto vert_source = utils::fs::loadFileToString(vShaderPath);
     auto frag_source = utils::fs::loadFileToString(fShaderPath);
 
-    utils::log::debug("vertex shader source: \n%s\n", vert_source->c_str());
-    utils::log::debug("fragment shader source: \n%s\n", frag_source->c_str());
-
     if (!vert_source.has_value() || !frag_source.has_value())
     {
         return -1;
@@ -51,6 +48,11 @@ int ShaderProgram::loadShadersFromSource(const char *vShaderPath, const char *fS
 void ShaderProgram::setUniform(const char *var, const glm::mat4 &mat)
 {
     glUniformMatrix4fv(mGetUniformLocation(var), 1, GL_FALSE, glm::value_ptr(mat));
+}
+
+void ShaderProgram::setUniform(const char *var, const glm::mat2 &mat)
+{
+    glUniformMatrix2fv(mGetUniformLocation(var), 1, GL_FALSE, glm::value_ptr(mat));
 }
 
 void ShaderProgram::setUniform(const char *var, const glm::vec3 &vec)

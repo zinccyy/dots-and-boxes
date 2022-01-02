@@ -37,6 +37,7 @@ class ShaderProgram
 
     // uniform setters
     void setUniform(const char *var, const glm::mat4 &mat);
+    void setUniform(const char *var, const glm::mat2 &mat);
     void setUniform(const char *var, const glm::vec3 &vec);
     void setUniform(const char *var, const glm::vec2 &vec);
     void setUniform(const char *var, const float value);
