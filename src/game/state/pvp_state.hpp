@@ -5,16 +5,19 @@
 #include <engine/drawable/box.hpp>
 #include <engine/drawable/dot.hpp>
 #include <engine/drawable/line.hpp>
+#include <engine/drawable/character.hpp>
 
 #include <utils/gl/shader_program.hpp>
 
 #include <vector>
 #include <memory>
+#include <map>
 
 namespace gm
 {
 namespace state
 {
+typedef std::map<char, eng::draw::Character> FontCharactersMap;
 class PlayerVsPlayerState : public State
 {
   public:
@@ -36,6 +39,10 @@ class PlayerVsPlayerState : public State
 
     // playing field
     std::vector<std::vector<eng::draw::Dot>> mDots;
+
+    // shadowed lines which are present until the line is drawn
+    std::vector<std::vector<eng::draw::Line>> mPlaceholderRowLines;
+    std::vector<std::vector<eng::draw::Line>> mPlaceholderColumnLines;
 
     // draw lines
     std::vector<eng::draw::Line *> mLines;
@@ -64,6 +71,14 @@ class PlayerVsPlayerState : public State
     // shaders
     utils::gl::ShaderProgram mDotShaderProgram;
     utils::gl::ShaderProgram mLineShaderProgram;
+    utils::gl::ShaderProgram mFontCharacterShaderProgram;
+
+    // font stuff
+    FontCharactersMap mCharsMap;
+
+    // freetype data
+    FT_Library mFreeType;
+    FT_Face mRobotoFace;
 };
 } // namespace state
 } // namespace gm

@@ -2,10 +2,12 @@
 
 out vec4 oColor;
 
+uniform vec3 uColor;
+
 vec3 rgb(vec3 color) {
     return color / 255.f;
 }
 
 void main() {
-    oColor = vec4(rgb(vec3(69, 69, 69)), 1);
+    oColor = vec4(rgb(uColor), 1);
 }

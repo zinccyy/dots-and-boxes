@@ -85,6 +85,7 @@ void Line::draw(utils::gl::ShaderProgram &program, const glm::vec2 &win_size)
     program.setUniform("uTranslate", translate);
     program.setUniform("uRotate", rotate);
     program.setUniform("uOrtho", ortho);
+    program.setUniform("uColor", Color);
 
     // bind VAO
     glBindVertexArray(mVAO);

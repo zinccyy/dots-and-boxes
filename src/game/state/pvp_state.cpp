@@ -24,10 +24,25 @@ PlayerVsPlayerState::PlayerVsPlayerState(Game *game) : State(game), mPickedDot(n
 PlayerVsPlayerState::PlayerVsPlayerState(Game *game, int n, int m) : PlayerVsPlayerState(game)
 {
     mBoardSize = glm::vec2(n + 1, m + 1);
+
     mDots.resize(n + 1);
     for (int i = 0; i < n + 1; i++)
     {
         mDots[i].resize(m + 1);
+    }
+
+    // row lines
+    mPlaceholderRowLines.resize(n + 1);
+    for (int i = 0; i < n + 1; i++)
+    {
+        mPlaceholderRowLines[i].resize(m);
+    }
+
+    // column lines
+    mPlaceholderColumnLines.resize(n);
+    for (int i = 0; i < n; i++)
+    {
+        mPlaceholderColumnLines[i].resize(m + 1);
     }
 }
 int PlayerVsPlayerState::init()
@@ -55,6 +70,45 @@ int PlayerVsPlayerState::init()
             mDots[i][j].OuterRadius = 1;
         }
     }
+
+    for (int i = 0; i < mBoardSize.x; i++)
+    {
+        for (int j = 0; j < mBoardSize.y - 1; j++)
+        {
+            error = mPlaceholderRowLines[i][j].setupBuffers();
+            if (error)
+            {
+                utils::log::error("unable to setup buffers for placeholder line %d", i * j);
+                return -1;
+            }
+
+            mPlaceholderRowLines[i][j].Height = 0.5f;
+            mPlaceholderRowLines[i][j].Color = utils::gl::parseHexRGB("#C0C0C0");
+            mPlaceholderRowLines[i][j].ConnectedDots.first = &mDots[i][j];
+            mPlaceholderRowLines[i][j].ConnectedDots.second = &mDots[i][j + 1];
+            mPlaceholderRowLines[i][j].updatePositions();
+        }
+    }
+
+    for (int i = 0; i < mBoardSize.x - 1; i++)
+    {
+        for (int j = 0; j < mBoardSize.y; j++)
+        {
+            error = mPlaceholderColumnLines[i][j].setupBuffers();
+            if (error)
+            {
+                utils::log::error("unable to setup buffers for placeholder line %d", i * j);
+                return -1;
+            }
+
+            mPlaceholderColumnLines[i][j].Height = 0.5f;
+            mPlaceholderColumnLines[i][j].Color = utils::gl::parseHexRGB("#C0C0C0");
+            mPlaceholderColumnLines[i][j].ConnectedDots.first = &mDots[i][j];
+            mPlaceholderColumnLines[i][j].ConnectedDots.second = &mDots[i + 1][j];
+            mPlaceholderColumnLines[i][j].updatePositions();
+        }
+    }
+
     mRecalculateDotsPositions(mGame->getWindowSize());
 
     utils::log::debug("loaded objects");
@@ -75,6 +129,40 @@ int PlayerVsPlayerState::init()
 
     utils::log::debug("loaded shaders");
 
+    // init freetype
+    if (FT_Init_FreeType(&mFreeType))
+    {
+        utils::log::error("could not init FreeType library");
+        return -1;
+    }
+
+    // load UI font
+    if (FT_New_Face(mFreeType, "assets/fonts/Roboto-Regular.ttf", 0, &mRobotoFace))
+    {
+        utils::log::error("unable to load roboto font face");
+        return -1;
+    }
+    FT_Set_Pixel_Sizes(mRobotoFace, 0, 48);
+
+    // single byte per pixel for characters
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    // once face loaded -> load characters and store them in the chars map
+    for (int c = 0; c < 128; c++)
+    {
+        eng::draw::Character cr(c, mRobotoFace);
+
+        if (cr.setupBuffers() != 0)
+        {
+            return -1;
+        }
+
+        mCharsMap[c] = cr;
+    }
+
+    utils::log::debug("loaded fonts");
+
+    // enable for transparency
     glEnable(GL_DEPTH_TEST);
 
     return 0;
@@ -138,7 +226,8 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
             }
             utils::log::debug("setting properties");
 
-            mNewLine->Height = 1.5;
+            mNewLine->Height = 1.5f;
+            mNewLine->Color = glm::vec3(32, 32, 32);
             mNewLine->ConnectedDots.first = mPickedDot;
             mNewLine->StartPosition = mNewLine->EndPosition = mPickedDot->Position;
         }
@@ -165,9 +254,9 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
             {
                 // check if able to connect
                 if ((mPickedDot->Position.x == mConnectDot->Position.x && mPickedDot->Position.y != mConnectDot->Position.y &&
-                     glm::abs(mPickedDot->Position.y - mConnectDot->Position.y) <= mDotsDistance.y) ||
+                     glm::abs(glm::abs(mPickedDot->Position.y - mConnectDot->Position.y) - mDotsDistance.y) < 1.0f) ||
                     ((mPickedDot->Position.y == mConnectDot->Position.y && mPickedDot->Position.x != mConnectDot->Position.x &&
-                      glm::abs(mPickedDot->Position.x - mConnectDot->Position.x) <= mDotsDistance.x)))
+                      glm::abs(glm::abs(mPickedDot->Position.x - mConnectDot->Position.x) - mDotsDistance.x) < 1.0f)))
                 {
                     utils::log::debug("dots distance: %f", mDotsDistance.y);
                     utils::log::debug("dots real distance: %f", glm::abs(mPickedDot->Position.y - mConnectDot->Position.y));
@@ -231,14 +320,30 @@ int PlayerVsPlayerState::draw()
         }
     }
 
+    if (mNewLine != nullptr)
+    {
+        mNewLine->draw(mLineShaderProgram, win_size);
+    }
+
     for (auto &line : mLines)
     {
         line->draw(mLineShaderProgram, win_size);
     }
 
-    if (mNewLine != nullptr)
+    for (int i = 0; i < mBoardSize.x; i++)
     {
-        mNewLine->draw(mLineShaderProgram, win_size);
+        for (int j = 0; j < mBoardSize.y - 1; j++)
+        {
+            mPlaceholderRowLines[i][j].draw(mLineShaderProgram, win_size);
+        }
+    }
+
+    for (int i = 0; i < mBoardSize.x - 1; i++)
+    {
+        for (int j = 0; j < mBoardSize.y; j++)
+        {
+            mPlaceholderColumnLines[i][j].draw(mLineShaderProgram, win_size);
+        }
     }
 
     return error;
@@ -260,6 +365,22 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
         for (int j = 0; j < mBoardSize.y; j++)
         {
             mDots[i][j].Position = glm::vec2(start_point_w + j * step_w, start_point_h + i * step_h);
+        }
+    }
+
+    for (int i = 0; i < mBoardSize.x; i++)
+    {
+        for (int j = 0; j < mBoardSize.y - 1; j++)
+        {
+            mPlaceholderRowLines[i][j].updatePositions();
+        }
+    }
+
+    for (int i = 0; i < mBoardSize.x - 1; i++)
+    {
+        for (int j = 0; j < mBoardSize.y; j++)
+        {
+            mPlaceholderColumnLines[i][j].updatePositions();
         }
     }
 
@@ -297,6 +418,10 @@ PlayerVsPlayerState::~PlayerVsPlayerState()
         delete mNewLine;
         mNewLine = nullptr;
     }
+
+    // shutdown freetype
+    FT_Done_Face(mRobotoFace);
+    FT_Done_FreeType(mFreeType);
 }
 } // namespace state
 } // namespace gm

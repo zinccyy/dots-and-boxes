@@ -2,6 +2,10 @@
 
 #include <game/state.hpp>
 
+// freetype
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 // SDL2
 #include <SDL2/SDL.h>
 

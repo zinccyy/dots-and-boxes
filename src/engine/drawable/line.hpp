@@ -19,6 +19,9 @@ class Line : public IDrawable
     // line height
     float Height;
 
+    // line color
+    glm::vec3 Color;
+
     // dots which the line connects - used to update positions once the dot positions change
     std::pair<Dot *, Dot *> ConnectedDots;
 

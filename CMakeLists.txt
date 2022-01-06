@@ -11,6 +11,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
+find_package(freetype CONFIG REQUIRED)
 
 add_executable(
     ${PROJECT_NAME}
@@ -36,6 +37,7 @@ add_executable(
     "src/engine/drawable/box.cpp"
     "src/engine/drawable/dot.cpp"
     "src/engine/drawable/line.cpp"
+    "src/engine/drawable/character.cpp"
 )
 
 target_link_libraries(
@@ -45,4 +47,5 @@ target_link_libraries(
     PRIVATE SDL2::SDL2
     PRIVATE glm::glm
     PRIVATE imgui::imgui
+    PRIVATE freetype
 )

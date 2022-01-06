@@ -1,5 +1,6 @@
 #include <SDL_events.h>
 #include <SDL_video.h>
+#include <freetype/freetype.h>
 #include <game/game.hpp>
 #include <utils/log.hpp>
 
@@ -63,7 +64,7 @@ int Game::initOpenGLData()
 
     // setup states
     mMainMenuState = new gm::state::MainMenu(this);
-    mPVPState = new gm::state::PlayerVsPlayerState(this, 4, 5);
+    mPVPState = new gm::state::PlayerVsPlayerState(this, 3, 3);
 
     // set current state
     mCurrentState = mPVPState;
