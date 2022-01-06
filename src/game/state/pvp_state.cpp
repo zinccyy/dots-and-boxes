@@ -1,3 +1,4 @@
+#include "engine/drawable/dot.hpp"
 #include <SDL_events.h>
 #include <SDL_video.h>
 #include <game/state/pvp_state.hpp>
@@ -17,16 +18,25 @@ namespace gm
 {
 namespace state
 {
-PlayerVsPlayerState::PlayerVsPlayerState(Game *game) : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr)
+PlayerVsPlayerState::PlayerVsPlayerState(Game *game) : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mBoardSize(0, 0)
 {
+}
+PlayerVsPlayerState::PlayerVsPlayerState(Game *game, int n, int m) : PlayerVsPlayerState(game)
+{
+    mBoardSize = glm::vec2(n + 1, m + 1);
+    mDots.resize(n + 1);
+    for (int i = 0; i < n + 1; i++)
+    {
+        mDots[i].resize(m + 1);
+    }
 }
 int PlayerVsPlayerState::init()
 {
     int error = 0;
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < mBoardSize.x; i++)
     {
-        for (int j = 0; j < 3; j++)
+        for (int j = 0; j < mBoardSize.y; j++)
         {
             error = mDots[i][j].setupBuffers();
             if (error)
@@ -41,11 +51,11 @@ int PlayerVsPlayerState::init()
             mDots[i][j].Smoothstep = true;
             mDots[i][j].InnerColor = utils::gl::parseHexRGB("#f2c595");
             mDots[i][j].OuterColor = glm::vec3(120, 120, 120);
-            mDots[i][j].InnerRadius = 0.7;
+            mDots[i][j].InnerRadius = 0.8;
             mDots[i][j].OuterRadius = 1;
         }
     }
-    mRecalculateDotsPositions(glm::vec2(800, 600));
+    mRecalculateDotsPositions(mGame->getWindowSize());
 
     utils::log::debug("loaded objects");
 
@@ -89,9 +99,9 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
         auto xrel = event.motion.xrel;
         auto yrel = event.motion.yrel;
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < mBoardSize.x; i++)
         {
-            for (int j = 0; j < 3; j++)
+            for (int j = 0; j < mBoardSize.y; j++)
             {
                 if (glm::distance(glm::vec2(x, y), mDots[i][j].Position) < mDots[i][j].Size)
                 {
@@ -115,7 +125,6 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
         mPickedDot = mGetHoveredDot();
         if (mPickedDot != nullptr)
         {
-            // append new line to the vector and use back() to fetch last line - currently drawn one
             mNewLine = new eng::draw::Line();
 
             utils::log::debug("adding new line");
@@ -129,7 +138,7 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
             }
             utils::log::debug("setting properties");
 
-            mNewLine->Height = 2;
+            mNewLine->Height = 1.5;
             mNewLine->ConnectedDots.first = mPickedDot;
             mNewLine->StartPosition = mNewLine->EndPosition = mPickedDot->Position;
         }
@@ -214,9 +223,9 @@ int PlayerVsPlayerState::draw()
     const auto win_size = mGame->getWindowSize();
     const auto ratio = win_size.x / win_size.y;
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < mBoardSize.x; i++)
     {
-        for (int j = 0; j < 3; j++)
+        for (int j = 0; j < mBoardSize.y; j++)
         {
             mDots[i][j].draw(mDotShaderProgram, win_size);
         }
@@ -239,20 +248,18 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
     const auto w = win_size.x;
     const auto h = win_size.y;
 
-    const auto step_w = w / 2;
-    const auto step_h = h / 2;
-    const auto start_point_w = step_w - step_w / 2;
-    const auto start_point_h = step_h - step_h / 2;
+    const auto start_point_w = w / mBoardSize.y;
+    const auto start_point_h = h / mBoardSize.x;
+    const auto step_w = ((float)w - 2 * start_point_w) / (mBoardSize.y - 1);
+    const auto step_h = ((float)h - 2 * start_point_h) / (mBoardSize.x - 1);
 
-    mDotsDistance = glm::vec2(start_point_w, start_point_h);
+    mDotsDistance = glm::vec2(step_w, step_h);
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < mBoardSize.x; i++)
     {
-        auto w2 = start_point_w + i * start_point_w;
-        for (int j = 0; j < 3; j++)
+        for (int j = 0; j < mBoardSize.y; j++)
         {
-            auto h2 = start_point_h + j * start_point_h;
-            mDots[i][j].Position = glm::vec2(w2, h2);
+            mDots[i][j].Position = glm::vec2(start_point_w + j * step_w, start_point_h + i * step_h);
         }
     }
 
@@ -265,9 +272,9 @@ eng::draw::Dot *PlayerVsPlayerState::mGetHoveredDot()
 {
     eng::draw::Dot *ptr = nullptr;
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < mBoardSize.x; i++)
     {
-        for (int j = 0; j < 3; j++)
+        for (int j = 0; j < mBoardSize.y; j++)
         {
             if (mDots[i][j].Hovered)
             {

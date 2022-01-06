@@ -20,6 +20,7 @@ class PlayerVsPlayerState : public State
 {
   public:
     PlayerVsPlayerState(Game *game);
+    PlayerVsPlayerState(Game *game, int n, int m);
 
     int init() override;
     int processEvent(SDL_Event &event) override;
@@ -35,7 +36,7 @@ class PlayerVsPlayerState : public State
     eng::draw::Dot *mGetHoveredDot();
 
     // playing field
-    std::array<std::array<eng::draw::Dot, 3>, 3> mDots;
+    std::vector<std::vector<eng::draw::Dot>> mDots;
 
     // draw lines
     std::vector<eng::draw::Line *> mLines;
@@ -51,6 +52,15 @@ class PlayerVsPlayerState : public State
 
     // separate distances for the dots - x and y values
     glm::vec2 mDotsDistance;
+
+    // N x M boxes
+    glm::vec2 mBoardSize;
+
+    // 0 or 1
+    bool mCurrentPlayer;
+
+    // player scores
+    std::array<int, 2> mScores;
 
     // shaders
     utils::gl::ShaderProgram mDotShaderProgram;

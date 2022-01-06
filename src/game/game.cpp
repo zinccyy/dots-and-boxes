@@ -34,7 +34,7 @@ int Game::init()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
-    mWindow = SDL_CreateWindow("dots-and-boxes", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    mWindow = SDL_CreateWindow("dots-and-boxes", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 800, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     mGLContext = SDL_GL_CreateContext(mWindow);
     SDL_GL_MakeCurrent(mWindow, mGLContext);
 
@@ -63,7 +63,7 @@ int Game::initOpenGLData()
 
     // setup states
     mMainMenuState = new gm::state::MainMenu(this);
-    mPVPState = new gm::state::PlayerVsPlayerState(this);
+    mPVPState = new gm::state::PlayerVsPlayerState(this, 4, 5);
 
     // set current state
     mCurrentState = mPVPState;
