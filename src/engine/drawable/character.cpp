@@ -40,7 +40,10 @@ int Character::setupBuffers()
     return error;
 }
 
-void Character::draw(gl::ShaderProgram &program, const glm::vec2 &win_size)
+void Character::draw(gl::ShaderProgram &program)
+{
+}
+void Character::windowResize(const glm::vec2 &win_size)
 {
 }
 } // namespace draw

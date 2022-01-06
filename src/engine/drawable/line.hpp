@@ -28,11 +28,18 @@ class Line : public IDrawable
     Line();
 
     int setupBuffers() override;
-    void draw(gl::ShaderProgram &program, const glm::vec2 &win_size) override;
+    void draw(gl::ShaderProgram &program) override;
+    void windowResize(const glm::vec2 &win_size) override;
 
     void updatePositions();
 
     ~Line();
+
+  private:
+    glm::mat4 mScale;
+    glm::mat4 mTranslate;
+    glm::mat4 mRotate;
+    glm::mat4 mOrtho;
 };
 } // namespace draw
 } // namespace eng

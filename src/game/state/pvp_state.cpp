@@ -82,11 +82,10 @@ int PlayerVsPlayerState::init()
                 return -1;
             }
 
-            mPlaceholderRowLines[i][j].Height = 0.5f;
+            mPlaceholderRowLines[i][j].Height = 1.f;
             mPlaceholderRowLines[i][j].Color = utils::gl::parseHexRGB("#C0C0C0");
             mPlaceholderRowLines[i][j].ConnectedDots.first = &mDots[i][j];
             mPlaceholderRowLines[i][j].ConnectedDots.second = &mDots[i][j + 1];
-            mPlaceholderRowLines[i][j].updatePositions();
         }
     }
 
@@ -101,14 +100,12 @@ int PlayerVsPlayerState::init()
                 return -1;
             }
 
-            mPlaceholderColumnLines[i][j].Height = 0.5f;
+            mPlaceholderColumnLines[i][j].Height = 1.f;
             mPlaceholderColumnLines[i][j].Color = utils::gl::parseHexRGB("#C0C0C0");
             mPlaceholderColumnLines[i][j].ConnectedDots.first = &mDots[i][j];
             mPlaceholderColumnLines[i][j].ConnectedDots.second = &mDots[i + 1][j];
-            mPlaceholderColumnLines[i][j].updatePositions();
         }
     }
-
     mRecalculateDotsPositions(mGame->getWindowSize());
 
     utils::log::debug("loaded objects");
@@ -143,22 +140,6 @@ int PlayerVsPlayerState::init()
         return -1;
     }
     FT_Set_Pixel_Sizes(mRobotoFace, 0, 48);
-
-    // single byte per pixel for characters
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    // once face loaded -> load characters and store them in the chars map
-    for (int c = 0; c < 128; c++)
-    {
-        eng::draw::Character cr(c, mRobotoFace);
-
-        if (cr.setupBuffers() != 0)
-        {
-            return -1;
-        }
-
-        mCharsMap[c] = cr;
-    }
 
     utils::log::debug("loaded fonts");
 
@@ -204,6 +185,7 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
         if (mNewLine && mPickedDot && !mConnectDot)
         {
             mNewLine->EndPosition = glm::vec2(event.motion.x, event.motion.y);
+            mNewLine->windowResize(mGame->getWindowSize());
         }
     }
     else if (event.type == SDL_MOUSEBUTTONDOWN)
@@ -264,6 +246,7 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
 
                     mNewLine->EndPosition = mConnectDot->Position;
                     mNewLine->ConnectedDots.second = mConnectDot;
+                    mNewLine->windowResize(mGame->getWindowSize());
                     mLines.push_back(mNewLine);
                     mNewLine = nullptr;
                 }
@@ -316,25 +299,25 @@ int PlayerVsPlayerState::draw()
     {
         for (int j = 0; j < mBoardSize.y; j++)
         {
-            mDots[i][j].draw(mDotShaderProgram, win_size);
+            mDots[i][j].draw(mDotShaderProgram);
         }
     }
 
     if (mNewLine != nullptr)
     {
-        mNewLine->draw(mLineShaderProgram, win_size);
+        mNewLine->draw(mLineShaderProgram);
     }
 
     for (auto &line : mLines)
     {
-        line->draw(mLineShaderProgram, win_size);
+        line->draw(mLineShaderProgram);
     }
 
     for (int i = 0; i < mBoardSize.x; i++)
     {
         for (int j = 0; j < mBoardSize.y - 1; j++)
         {
-            mPlaceholderRowLines[i][j].draw(mLineShaderProgram, win_size);
+            mPlaceholderRowLines[i][j].draw(mLineShaderProgram);
         }
     }
 
@@ -342,7 +325,7 @@ int PlayerVsPlayerState::draw()
     {
         for (int j = 0; j < mBoardSize.y; j++)
         {
-            mPlaceholderColumnLines[i][j].draw(mLineShaderProgram, win_size);
+            mPlaceholderColumnLines[i][j].draw(mLineShaderProgram);
         }
     }
 
@@ -365,6 +348,7 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
         for (int j = 0; j < mBoardSize.y; j++)
         {
             mDots[i][j].Position = glm::vec2(start_point_w + j * step_w, start_point_h + i * step_h);
+            mDots[i][j].windowResize(win_size);
         }
     }
 
@@ -373,6 +357,7 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
         for (int j = 0; j < mBoardSize.y - 1; j++)
         {
             mPlaceholderRowLines[i][j].updatePositions();
+            mPlaceholderRowLines[i][j].windowResize(win_size);
         }
     }
 
@@ -381,12 +366,14 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
         for (int j = 0; j < mBoardSize.y; j++)
         {
             mPlaceholderColumnLines[i][j].updatePositions();
+            mPlaceholderColumnLines[i][j].windowResize(win_size);
         }
     }
 
     for (auto &line : mLines)
     {
         line->updatePositions();
+        line->windowResize(win_size);
     }
 }
 eng::draw::Dot *PlayerVsPlayerState::mGetHoveredDot()

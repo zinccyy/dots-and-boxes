@@ -60,31 +60,33 @@ int Line::setupBuffers()
 
     return error;
 }
-void Line::draw(utils::gl::ShaderProgram &program, const glm::vec2 &win_size)
+void Line::windowResize(const glm::vec2 &win_size)
 {
-    // enable shaders
-    program.use();
-
     // calculate length
-    const auto len = glm::distance(StartPosition, EndPosition) / 2;
+    const auto len = glm::distance(StartPosition, EndPosition) / 2.f;
     const auto angle = glm::orientedAngle(glm::normalize(glm::vec2(StartPosition.x + 1, StartPosition.y) - StartPosition), glm::normalize(EndPosition - StartPosition));
 
     auto start = StartPosition - glm::vec2(StartPosition.x / 2, 0);
     auto end = StartPosition + glm::vec2(StartPosition.x / 2, 0);
 
-    auto scale = glm::scale(glm::mat4(1), glm::vec3(len, Height, 0));
-    auto rotate = glm::rotate(glm::mat4(1), angle, glm::vec3(0, 0, 1));
-    auto rot_start = glm::vec2(rotate * glm::vec4(start, 0, 1));
-    auto rot_end = glm::vec2(rotate * glm::vec4(end, 0, 1));
+    mScale = glm::scale(glm::mat4(1), glm::vec3(len, Height, 0));
+    mRotate = glm::rotate(glm::mat4(1), angle, glm::vec3(0, 0, 1));
+    auto rot_start = glm::vec2(mRotate * glm::vec4(start, 0, 0));
+    auto rot_end = glm::vec2(mRotate * glm::vec4(end, 0, 0));
     auto unit = (rot_end - rot_start) / glm::distance(rot_end, rot_start);
     auto trans_vec = StartPosition + unit * len;
-    auto translate = glm::translate(glm::mat4(1), glm::vec3(trans_vec, 0));
-    auto ortho = glm::ortho(0.f, win_size.x, win_size.y, 0.f);
+    mTranslate = glm::translate(glm::mat4(1), glm::vec3(trans_vec, 0));
+    mOrtho = glm::ortho(0.f, win_size.x, win_size.y, 0.f);
+}
+void Line::draw(utils::gl::ShaderProgram &program)
+{
+    // enable shaders
+    program.use();
 
-    program.setUniform("uScale", scale);
-    program.setUniform("uTranslate", translate);
-    program.setUniform("uRotate", rotate);
-    program.setUniform("uOrtho", ortho);
+    program.setUniform("uScale", mScale);
+    program.setUniform("uTranslate", mTranslate);
+    program.setUniform("uRotate", mRotate);
+    program.setUniform("uOrtho", mOrtho);
     program.setUniform("uColor", Color);
 
     // bind VAO

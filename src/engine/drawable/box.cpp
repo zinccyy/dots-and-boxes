@@ -14,7 +14,7 @@ int Box::setupBuffers()
     int error = 0;
     return error;
 }
-void Box::draw(utils::gl::ShaderProgram &program, const glm::vec2 &win_size)
+void Box::draw(utils::gl::ShaderProgram &program)
 {
 }
 } // namespace draw

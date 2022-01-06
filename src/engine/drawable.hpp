@@ -14,7 +14,10 @@ class IDrawable
     virtual int setupBuffers() = 0;
 
     // draw object to the opengl context
-    virtual void draw(gl::ShaderProgram &program, const glm::vec2 &win_size) = 0;
+    virtual void draw(gl::ShaderProgram &program) = 0;
+
+    // update matrices and other needed stuff once the window resizes - performance boost instead of recalculating matrices each draw() call
+    virtual void windowResize(const glm::vec2 &win_size) = 0;
 
   protected:
     unsigned int mVBO;

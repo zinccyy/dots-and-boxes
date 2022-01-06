@@ -52,16 +52,18 @@ int Dot::setupBuffers()
 
     return error;
 }
-void Dot::draw(utils::gl::ShaderProgram &program, const glm::vec2 &win_size)
+void Dot::windowResize(const glm::vec2 &win_size)
+{
+    mScale = glm::scale(glm::mat4(1), glm::vec3(glm::vec2(Size), 0));
+    mTranslate = glm::translate(glm::mat4(1), glm::vec3(Position, 0));
+
+    // reverse Y coordinate
+    mOrtho = glm::ortho(0.f, win_size.x, win_size.y, 0.f);
+}
+void Dot::draw(utils::gl::ShaderProgram &program)
 {
     // enable shaders
     program.use();
-
-    auto scale = glm::scale(glm::mat4(1), glm::vec3(glm::vec2(Size), 0));
-    auto translate = glm::translate(glm::mat4(1), glm::vec3(Position, 0));
-
-    // reverse Y coordinate
-    auto ortho = glm::ortho(0.f, win_size.x, win_size.y, 0.f);
 
     program.setUniform("uPosition", Position);
     program.setUniform("uInnerColor", InnerColor);
@@ -70,9 +72,9 @@ void Dot::draw(utils::gl::ShaderProgram &program, const glm::vec2 &win_size)
     program.setUniform("uOuterRadius", OuterRadius);
     program.setUniform("uHovered", Hovered);
     program.setUniform("uSmoothstep", Smoothstep);
-    program.setUniform("uScale", scale);
-    program.setUniform("uTranslate", translate);
-    program.setUniform("uOrtho", ortho);
+    program.setUniform("uScale", mScale);
+    program.setUniform("uTranslate", mTranslate);
+    program.setUniform("uOrtho", mOrtho);
 
     // bind VAO
     glBindVertexArray(mVAO);

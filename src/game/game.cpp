@@ -64,7 +64,7 @@ int Game::initOpenGLData()
 
     // setup states
     mMainMenuState = new gm::state::MainMenu(this);
-    mPVPState = new gm::state::PlayerVsPlayerState(this, 3, 3);
+    mPVPState = new gm::state::PlayerVsPlayerState(this, 5, 4);
 
     // set current state
     mCurrentState = mPVPState;

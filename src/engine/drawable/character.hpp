@@ -23,7 +23,8 @@ struct Character : public IDrawable
     Character(char c, FT_Face face);
 
     int setupBuffers() override;
-    void draw(gl::ShaderProgram &program, const glm::vec2 &win_size) override;
+    void draw(gl::ShaderProgram &program) override;
+    void windowResize(const glm::vec2 &win_size) override;
 };
 } // namespace draw
 } // namespace eng

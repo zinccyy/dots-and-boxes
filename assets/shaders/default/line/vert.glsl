@@ -10,6 +10,5 @@ uniform mat4 uRotate;
 uniform mat4 uOrtho;
 
 void main() {
-    vec4 pos = uOrtho * uTranslate * uRotate * uScale * vec4(iPos, 0, 1);
-    gl_Position = pos;
+    gl_Position = uOrtho * uTranslate * uRotate * uScale * vec4(iPos, 0, 1);
 }
