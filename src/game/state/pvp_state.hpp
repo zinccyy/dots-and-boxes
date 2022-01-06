@@ -8,7 +8,6 @@
 
 #include <utils/gl/shader_program.hpp>
 
-#include <array>
 #include <vector>
 #include <memory>
 
