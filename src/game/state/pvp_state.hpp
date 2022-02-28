@@ -34,15 +34,24 @@ class PlayerVsPlayerState : public State
   private:
     void mRecalculateDotsPositions(const glm::vec2 &win_size);
 
+    // check if a line has been drawn resulting in a new box
+    // returns true if any new boxes have been drawn -> current player keeps the turn
+    bool mCheckForNewBoxes();
+
     // fetch currently hovered dot -> nullptr if no dot is hovered
     eng::draw::Dot *mGetHoveredDot();
 
     // playing field
     std::vector<std::vector<eng::draw::Dot>> mDots;
 
+    // boxes to draw once they have been filled
+    std::vector<std::vector<eng::draw::Box>> mBoxes;
+
     // shadowed lines which are present until the line is drawn
     std::vector<std::vector<eng::draw::Line>> mPlaceholderRowLines;
     std::vector<std::vector<eng::draw::Line>> mPlaceholderColumnLines;
+
+    std::vector<std::vector<bool>> mAdjencyMatrix;
 
     // draw lines
     std::vector<eng::draw::Line *> mLines;
@@ -53,8 +62,14 @@ class PlayerVsPlayerState : public State
     // dot where the mouse was pressed and is trying to connect with the other dot
     eng::draw::Dot *mPickedDot;
 
+    // i,j of the picked dot
+    int mPickedIndex;
+
     // dot to connect with picked dot - once the mouse was released
     eng::draw::Dot *mConnectDot;
+
+    // i,j of the connect dot
+    int mConnectIndex;
 
     // separate distances for the dots - x and y values
     glm::vec2 mDotsDistance;
@@ -70,6 +85,7 @@ class PlayerVsPlayerState : public State
 
     // shaders
     utils::gl::ShaderProgram mDotShaderProgram;
+    utils::gl::ShaderProgram mBoxShaderProgram;
     utils::gl::ShaderProgram mLineShaderProgram;
     utils::gl::ShaderProgram mFontCharacterShaderProgram;
 

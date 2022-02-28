@@ -43,6 +43,21 @@ class Game
         return glm::vec2(x, y);
     }
 
+    void setPlayerVsPlayerState(State *state)
+    {
+        mPVPState = state;
+    }
+
+    State *getPlayerVsPlayerState()
+    {
+        return mPVPState;
+    }
+
+    void changeState(State *state)
+    {
+        mCurrentState = state;
+    }
+
     ~Game();
 
   private:

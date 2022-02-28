@@ -2,6 +2,8 @@
 
 #include <game/state.hpp>
 
+#include <glm/glm.hpp>
+
 namespace gm
 {
 namespace state
@@ -27,6 +29,11 @@ class MainMenu : public State
     bool mShowAbout;
     bool mShowModes;
     bool mShowSettings;
+
+    bool mShowVsPlayerSizePicker;
+    bool mShowVsCPUSizePicker;
+
+    glm::ivec2 mNewFieldSize;
 };
 } // namespace state
 } // namespace gm

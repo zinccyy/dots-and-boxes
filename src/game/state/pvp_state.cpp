@@ -3,6 +3,7 @@
 #include <SDL_video.h>
 #include <game/state/pvp_state.hpp>
 
+#include <utility>
 #include <utils/log.hpp>
 #include <utils/gl/gl.hpp>
 
@@ -18,17 +19,36 @@ namespace gm
 {
 namespace state
 {
-PlayerVsPlayerState::PlayerVsPlayerState(Game *game) : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mBoardSize(0, 0)
+PlayerVsPlayerState::PlayerVsPlayerState(Game *game)
+    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mBoardSize(0, 0), mPickedIndex(-1), mConnectIndex(-1)
 {
 }
 PlayerVsPlayerState::PlayerVsPlayerState(Game *game, int n, int m) : PlayerVsPlayerState(game)
 {
     mBoardSize = glm::vec2(n + 1, m + 1);
+    const auto dots_count = (n + 1) * (m + 1);
+
+    mAdjencyMatrix.resize(dots_count);
+    for (int i = 0; i < dots_count; i++)
+    {
+        mAdjencyMatrix[i].resize(dots_count);
+        for (int j = 0; j < dots_count; j++)
+        {
+            mAdjencyMatrix[i][j] = false;
+        }
+    }
 
     mDots.resize(n + 1);
     for (int i = 0; i < n + 1; i++)
     {
         mDots[i].resize(m + 1);
+    }
+
+    // N x M boxes can be drawn
+    mBoxes.resize(n);
+    for (int i = 0; i < n; i++)
+    {
+        mBoxes[i].resize(m);
     }
 
     // row lines
@@ -49,6 +69,7 @@ int PlayerVsPlayerState::init()
 {
     int error = 0;
 
+    // dots
     for (int i = 0; i < mBoardSize.x; i++)
     {
         for (int j = 0; j < mBoardSize.y; j++)
@@ -68,6 +89,23 @@ int PlayerVsPlayerState::init()
             mDots[i][j].OuterColor = glm::vec3(120, 120, 120);
             mDots[i][j].InnerRadius = 0.8;
             mDots[i][j].OuterRadius = 1;
+        }
+    }
+
+    // boxes
+    for (int i = 0; i < mBoardSize.x - 1; i++)
+    {
+        for (int j = 0; j < mBoardSize.y - 1; j++)
+        {
+            error = mBoxes[i][j].setupBuffers();
+            if (error)
+            {
+                utils::log::error("unable to setup buffers for box %d", i * j);
+                return -1;
+            }
+
+            // mBoxes[i][j].Color = utils::gl::parseHexRGB("#f08080");
+            mBoxes[i][j].Draw = false;
         }
     }
 
@@ -114,6 +152,13 @@ int PlayerVsPlayerState::init()
     if (error)
     {
         utils::log::error("unable to load default dot shaders");
+        return -1;
+    }
+
+    error = mBoxShaderProgram.loadShadersFromSource("assets/shaders/default/box/vert.glsl", "assets/shaders/default/box/frag.glsl");
+    if (error)
+    {
+        utils::log::error("unable to load default box shaders");
         return -1;
     }
 
@@ -249,6 +294,15 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
                     mNewLine->windowResize(mGame->getWindowSize());
                     mLines.push_back(mNewLine);
                     mNewLine = nullptr;
+
+                    utils::log::debug("picked = %d, connect = %d", mPickedIndex, mConnectIndex);
+                    mAdjencyMatrix[mPickedIndex][mConnectIndex] = true;
+                    mAdjencyMatrix[mConnectIndex][mPickedIndex] = true;
+                    bool any_new = mCheckForNewBoxes();
+                    if (!any_new)
+                    {
+                        mCurrentPlayer = !mCurrentPlayer;
+                    }
                 }
                 else
                 {
@@ -257,8 +311,14 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
                     mNewLine = nullptr;
                 }
 
+                // configure adjency matrix
+                // mAdjencyMatrix[mConnectIndex.second * mBoardSize.y + mConnectIndex.first][mPickedIndex.second * mBoardSize.y + mPickedIndex.first] = true;
+                // mAdjencyMatrix[mPickedIndex.second * mBoardSize.y + mPickedIndex.first][mConnectIndex.second * mBoardSize.y + mConnectIndex.first] = true;
+
                 mPickedDot = nullptr;
                 mConnectDot = nullptr;
+                mPickedIndex = -1;
+                mConnectIndex = -1;
             }
         }
         else if (mPickedDot != nullptr)
@@ -303,6 +363,14 @@ int PlayerVsPlayerState::draw()
         }
     }
 
+    for (int i = 0; i < mBoardSize.x - 1; i++)
+    {
+        for (int j = 0; j < mBoardSize.y - 1; j++)
+        {
+            mBoxes[i][j].draw(mBoxShaderProgram);
+        }
+    }
+
     if (mNewLine != nullptr)
     {
         mNewLine->draw(mLineShaderProgram);
@@ -343,12 +411,24 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
 
     mDotsDistance = glm::vec2(step_w, step_h);
 
+    // dots
     for (int i = 0; i < mBoardSize.x; i++)
     {
         for (int j = 0; j < mBoardSize.y; j++)
         {
             mDots[i][j].Position = glm::vec2(start_point_w + j * step_w, start_point_h + i * step_h);
             mDots[i][j].windowResize(win_size);
+        }
+    }
+
+    // boxes
+    for (int i = 0; i < mBoardSize.x - 1; i++)
+    {
+        for (int j = 0; j < mBoardSize.y - 1; j++)
+        {
+            mBoxes[i][j].Position = glm::vec2((mDots[i][j].Position.x + mDots[i][j + 1].Position.x) / 2.f, (mDots[i][j].Position.y + mDots[i + 1][j].Position.y) / 2.f);
+            mBoxes[i][j].Size = glm::vec2((mDots[i][j + 1].Position.x - mDots[i][j].Position.x) / 2.5f, (mDots[i + 1][j].Position.y - mDots[i][j].Position.y) / 2.5f);
+            mBoxes[i][j].windowResize(win_size);
         }
     }
 
@@ -376,6 +456,36 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
         line->windowResize(win_size);
     }
 }
+bool PlayerVsPlayerState::mCheckForNewBoxes()
+{
+    bool any_new = false;
+    for (int i = 0; i < mBoardSize.y - 1; i++)
+    {
+        for (int j = 0; j < mBoardSize.x - 1; j++)
+        {
+            if (mBoxes[i][j].Draw)
+            {
+                // box is already drawn
+                continue;
+            }
+
+            const int top_left = mBoardSize.y * i + j;
+            const int top_right = mBoardSize.y * i + (j + 1);
+            const int bottom_left = mBoardSize.y * (i + 1) + j;
+            const int bottom_right = mBoardSize.y * (i + 1) + (j + 1);
+
+            // check if a box is formed
+            if (mAdjencyMatrix[top_left][top_right] && mAdjencyMatrix[top_left][bottom_left] && mAdjencyMatrix[top_right][bottom_right] && mAdjencyMatrix[bottom_left][bottom_right])
+            {
+                mBoxes[i][j].Draw = true;
+                mBoxes[i][j].Color = mCurrentPlayer ? utils::gl::parseHexRGB("#add8e6") : utils::gl::parseHexRGB("#f08080");
+                any_new = true;
+            }
+        }
+    }
+
+    return any_new;
+}
 eng::draw::Dot *PlayerVsPlayerState::mGetHoveredDot()
 {
     eng::draw::Dot *ptr = nullptr;
@@ -387,6 +497,14 @@ eng::draw::Dot *PlayerVsPlayerState::mGetHoveredDot()
             if (mDots[i][j].Hovered)
             {
                 ptr = &mDots[i][j];
+                if (!mPickedDot)
+                {
+                    mPickedIndex = i * mBoardSize.y + j;
+                }
+                else if (mPickedDot && !mConnectDot)
+                {
+                    mConnectIndex = i * mBoardSize.y + j;
+                }
                 break;
             }
         }
