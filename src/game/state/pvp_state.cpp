@@ -3,6 +3,7 @@
 #include <SDL_video.h>
 #include <game/state/pvp_state.hpp>
 
+#include <sstream>
 #include <utility>
 #include <utils/log.hpp>
 #include <utils/gl/gl.hpp>
@@ -20,7 +21,9 @@ namespace gm
 namespace state
 {
 PlayerVsPlayerState::PlayerVsPlayerState(Game *game)
-    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mBoardSize(0, 0), mPickedIndex(-1), mConnectIndex(-1)
+    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mBoardSize(0, 0), mPickedIndex(-1),
+      mConnectIndex(-1), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 4 - 50, 100)),
+                                          eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x - (mGame->getWindowSize().x / 4) - 50, 100))}
 {
 }
 PlayerVsPlayerState::PlayerVsPlayerState(Game *game, int n, int m) : PlayerVsPlayerState(game)
@@ -169,6 +172,13 @@ int PlayerVsPlayerState::init()
         return -1;
     }
 
+    error = mFontCharacterShaderProgram.loadShadersFromSource("assets/shaders/font/vert.glsl", "assets/shaders/font/frag.glsl");
+    if (error)
+    {
+        utils::log::error("unable to load default line shaders");
+        return -1;
+    }
+
     utils::log::debug("loaded shaders");
 
     // init freetype
@@ -188,8 +198,46 @@ int PlayerVsPlayerState::init()
 
     utils::log::debug("loaded fonts");
 
+    for (int c = 0; c < 128; c++)
+    {
+        mCharsMap[c] = eng::draw::Character(c, mRobotoFace);
+
+        error = mCharsMap[c].setupBuffers();
+        if (error)
+        {
+            utils::log::error("unable to create bitmap for character %c", (char)c);
+            return -1;
+        }
+    }
+
+    utils::log::debug("loaded needed character bitmaps");
+
+    // setup initial text
+    mPlayerScoreText[0].Color = utils::gl::parseHexRGB("#6495ed");
+    mPlayerScoreText[0].setText("0");
+    mPlayerScoreText[0].Scale = 0.5;
+
+    mPlayerScoreText[1].Color = utils::gl::parseHexRGB("#f08080");
+    std::cout << glm::to_string(mPlayerScoreText[1].Color) << std::endl;
+    mPlayerScoreText[1].setText("0");
+    mPlayerScoreText[1].Scale = 0.5;
+
+    for (auto &text : mPlayerScoreText)
+    {
+        error = text.setupBuffers();
+        if (error)
+        {
+            utils::log::error("unable to setup buffers player score text");
+            return -1;
+        }
+    }
+
     // enable for transparency
     glEnable(GL_DEPTH_TEST);
+
+    // needed for glyphs
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     return 0;
 }
@@ -311,10 +359,6 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
                     mNewLine = nullptr;
                 }
 
-                // configure adjency matrix
-                // mAdjencyMatrix[mConnectIndex.second * mBoardSize.y + mConnectIndex.first][mPickedIndex.second * mBoardSize.y + mPickedIndex.first] = true;
-                // mAdjencyMatrix[mPickedIndex.second * mBoardSize.y + mPickedIndex.first][mConnectIndex.second * mBoardSize.y + mConnectIndex.first] = true;
-
                 mPickedDot = nullptr;
                 mConnectDot = nullptr;
                 mPickedIndex = -1;
@@ -355,6 +399,13 @@ int PlayerVsPlayerState::draw()
     const auto win_size = mGame->getWindowSize();
     const auto ratio = win_size.x / win_size.y;
 
+    // text
+    for (auto &text : mPlayerScoreText)
+    {
+        text.draw(mFontCharacterShaderProgram);
+    }
+
+    // dots
     for (int i = 0; i < mBoardSize.x; i++)
     {
         for (int j = 0; j < mBoardSize.y; j++)
@@ -363,6 +414,7 @@ int PlayerVsPlayerState::draw()
         }
     }
 
+    // boxes
     for (int i = 0; i < mBoardSize.x - 1; i++)
     {
         for (int j = 0; j < mBoardSize.y - 1; j++)
@@ -371,6 +423,7 @@ int PlayerVsPlayerState::draw()
         }
     }
 
+    // lines
     if (mNewLine != nullptr)
     {
         mNewLine->draw(mLineShaderProgram);
@@ -455,10 +508,18 @@ void PlayerVsPlayerState::mRecalculateDotsPositions(const glm::vec2 &win_size)
         line->updatePositions();
         line->windowResize(win_size);
     }
+
+    // update text orthogonal matrices also
+    for (auto &text : mPlayerScoreText)
+    {
+        text.windowResize(win_size);
+    }
 }
 bool PlayerVsPlayerState::mCheckForNewBoxes()
 {
     bool any_new = false;
+    std::stringstream score_ss;
+
     for (int i = 0; i < mBoardSize.y - 1; i++)
     {
         for (int j = 0; j < mBoardSize.x - 1; j++)
@@ -478,12 +539,22 @@ bool PlayerVsPlayerState::mCheckForNewBoxes()
             if (mAdjencyMatrix[top_left][top_right] && mAdjencyMatrix[top_left][bottom_left] && mAdjencyMatrix[top_right][bottom_right] && mAdjencyMatrix[bottom_left][bottom_right])
             {
                 mBoxes[i][j].Draw = true;
-                mBoxes[i][j].Color = mCurrentPlayer ? utils::gl::parseHexRGB("#add8e6") : utils::gl::parseHexRGB("#f08080");
+                mBoxes[i][j].Color = (!mCurrentPlayer) ? utils::gl::parseHexRGB("#6495ed") : utils::gl::parseHexRGB("#f08080");
                 any_new = true;
+
+                // setup score
+                mScores[mCurrentPlayer]++;
+                score_ss << mScores[mCurrentPlayer];
+                mPlayerScoreText[mCurrentPlayer].setText(score_ss.str());
+                score_ss.str("");
             }
         }
     }
 
+    if (mScores[0] + mScores[1] == ((mBoardSize.x - 1) * (mBoardSize.y - 1)))
+    {
+        // all the boxes have been drawn -> game over -> print a winner
+    }
     return any_new;
 }
 eng::draw::Dot *PlayerVsPlayerState::mGetHoveredDot()

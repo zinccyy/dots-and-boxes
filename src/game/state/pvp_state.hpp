@@ -6,6 +6,7 @@
 #include <engine/drawable/dot.hpp>
 #include <engine/drawable/line.hpp>
 #include <engine/drawable/character.hpp>
+#include <engine/drawable/text.hpp>
 
 #include <utils/gl/shader_program.hpp>
 
@@ -17,7 +18,6 @@ namespace gm
 {
 namespace state
 {
-typedef std::map<char, eng::draw::Character> FontCharactersMap;
 class PlayerVsPlayerState : public State
 {
   public:
@@ -90,11 +90,14 @@ class PlayerVsPlayerState : public State
     utils::gl::ShaderProgram mFontCharacterShaderProgram;
 
     // font stuff
-    FontCharactersMap mCharsMap;
+    eng::draw::FontCharactersMap mCharsMap;
 
     // freetype data
     FT_Library mFreeType;
     FT_Face mRobotoFace;
+
+    // text to use
+    std::array<eng::draw::Text, 2> mPlayerScoreText;
 };
 } // namespace state
 } // namespace gm

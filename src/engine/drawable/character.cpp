@@ -17,14 +17,17 @@ int Character::setupBuffers()
 {
     int error = 0;
 
+    // grayscale - store only to RED
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
     if (FT_Load_Char(FontFace, Char, FT_LOAD_RENDER))
     {
         utils::log::error("unable to load char %c from font face", Char);
         return -1;
     }
 
-    glGenTextures(1, &TextureID);
-    glBindTexture(GL_TEXTURE_2D, TextureID);
+    glGenTextures(1, &this->TextureID);
+    glBindTexture(GL_TEXTURE_2D, this->TextureID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FontFace->glyph->bitmap.width, FontFace->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, FontFace->glyph->bitmap.buffer);
 
     // setup texture options
@@ -42,7 +45,10 @@ int Character::setupBuffers()
 
 void Character::draw(gl::ShaderProgram &program)
 {
+    glBindTexture(GL_TEXTURE_2D, TextureID);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
+
 void Character::windowResize(const glm::vec2 &win_size)
 {
 }

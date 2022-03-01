@@ -38,6 +38,7 @@ add_executable(
     "src/engine/drawable/dot.cpp"
     "src/engine/drawable/line.cpp"
     "src/engine/drawable/character.cpp"
+    "src/engine/drawable/text.cpp"
 )
 
 target_link_libraries(

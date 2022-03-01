@@ -90,26 +90,26 @@ int MainMenu::processInput()
     if (mShowVsPlayerSizePicker)
     {
         // get size of the field and start the game mode
-        // ImGui::Begin("Field size");
-        // ImGui::Text("Choose field size: ");
-        // ImGui::SliderInt("N", &mNewFieldSize.x, 1, 6);
-        // ImGui::SliderInt("M", &mNewFieldSize.y, 1, 6);
-        // if (ImGui::Button("Start", ImVec2(50, 20)))
-        // {
-        utils::log::debug("start game: %dx%d", mNewFieldSize.x, mNewFieldSize.y);
-        auto new_state = new gm::state::PlayerVsPlayerState(mGame, mNewFieldSize.x, mNewFieldSize.y);
-        if (new_state->init())
+        ImGui::Begin("Field size");
+        ImGui::Text("Choose field size: ");
+        ImGui::SliderInt("N", &mNewFieldSize.x, 1, 6);
+        ImGui::SliderInt("M", &mNewFieldSize.y, 1, 6);
+        if (ImGui::Button("Start", ImVec2(50, 20)))
         {
-            // error
-            error = -1;
+            utils::log::debug("start game: %dx%d", mNewFieldSize.x, mNewFieldSize.y);
+            auto new_state = new gm::state::PlayerVsPlayerState(mGame, mNewFieldSize.x, mNewFieldSize.y);
+            if (new_state->init())
+            {
+                // error
+                error = -1;
+            }
+            else
+            {
+                mGame->setPlayerVsPlayerState(new_state);
+                mGame->changeState(mGame->getPlayerVsPlayerState());
+            }
         }
-        else
-        {
-            mGame->setPlayerVsPlayerState(new_state);
-            mGame->changeState(mGame->getPlayerVsPlayerState());
-        }
-        // }
-        // ImGui::End();
+        ImGui::End();
     }
 
     // if (mShowVsCPUSizePicker)
