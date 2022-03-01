@@ -98,6 +98,12 @@ class PlayerVsPlayerState : public State
 
     // text to use
     std::array<eng::draw::Text, 2> mPlayerScoreText;
+
+    // make game over
+    bool mGameFinished;
+
+    // colors
+    std::array<glm::vec3, 2> mPlayerColors;
 };
 } // namespace state
 } // namespace gm

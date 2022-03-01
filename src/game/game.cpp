@@ -18,7 +18,7 @@
 
 namespace gm
 {
-Game::Game() : mWindow(nullptr), mGLContext(nullptr), mRunning(false), mCurrentState(nullptr), mMainMenuState(nullptr), mPVPState(nullptr), mModePlayingState(nullptr), mSettingsState(nullptr)
+Game::Game() : mWindow(nullptr), mGLContext(nullptr), mRunning(false)
 {
 }
 
@@ -63,13 +63,15 @@ int Game::initOpenGLData()
     }
 
     // setup states
-    mMainMenuState = new gm::state::MainMenu(this);
+    auto main_menu = new gm::state::MainMenu(this);
+    error = main_menu->init();
+    if (error)
+    {
+        utils::log::error("unable to init main menu state");
+        return -1;
+    }
 
-    // set current state
-    mCurrentState = mMainMenuState;
-
-    // init all states
-    error = mCurrentState->init();
+    mStates.push(main_menu);
 
     return error;
 }
@@ -79,10 +81,12 @@ int Game::run()
     int error = 0;
     while (mRunning)
     {
+        auto top_state = mStates.top();
+
         // 1: poll events
         while (SDL_PollEvent(&mEvent))
         {
-            mCurrentState->processEvent(mEvent);
+            top_state->processEvent(mEvent);
             if (mEvent.type == SDL_QUIT)
             {
                 mRunning = false;
@@ -90,10 +94,10 @@ int Game::run()
         }
 
         // 2: update according to FPS etc.
-        mCurrentState->processInput();
+        top_state->processInput();
 
         // 3: draw stuff
-        mCurrentState->draw();
+        top_state->draw();
 
         // 4: swap buffers
         SDL_GL_SwapWindow(mWindow);
@@ -102,15 +106,14 @@ int Game::run()
 }
 Game::~Game()
 {
-    // delete states
-    if (mMainMenuState)
+    while (mStates.size())
     {
-        delete mMainMenuState;
-    }
+        auto state = mStates.top();
 
-    if (mPVPState)
-    {
-        delete mPVPState;
+        // free state data
+        delete state;
+
+        mStates.pop();
     }
 
     // shutdown imgui

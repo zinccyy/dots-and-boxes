@@ -15,6 +15,9 @@
 // glm
 #include <glm/glm.hpp>
 
+// stdlib
+#include <stack>
+
 namespace gm
 {
 class Game
@@ -43,19 +46,18 @@ class Game
         return glm::vec2(x, y);
     }
 
-    void setPlayerVsPlayerState(State *state)
+    void pushState(State *state)
     {
-        mPVPState = state;
+        mStates.push(state);
     }
 
-    State *getPlayerVsPlayerState()
+    State *popState()
     {
-        return mPVPState;
-    }
+        auto top = mStates.top();
 
-    void changeState(State *state)
-    {
-        mCurrentState = state;
+        mStates.pop();
+
+        return top;
     }
 
     ~Game();
@@ -63,23 +65,6 @@ class Game
   private:
     // is the game still running
     bool mRunning;
-
-    // currently running state of the game - set to main menu at the start and from there forward manipulate using the Game class API
-    gm::State *mCurrentState;
-
-    // all possible states:
-
-    // main menu opened
-    gm::State *mMainMenuState;
-
-    // plaver vs player state
-    gm::State *mPVPState;
-
-    // settings edit
-    gm::State *mSettingsState;
-
-    // one of the picked modes being played
-    gm::State *mModePlayingState;
 
     // SDL2 data
     SDL_Window *mWindow;
@@ -89,5 +74,8 @@ class Game
     // imgui data
     ImGuiIO mImGuiIO;
     ImFont *mUIFont;
+
+    // state stack -> the top state is the current one
+    std::stack<gm::State *> mStates;
 };
 } // namespace gm

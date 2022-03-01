@@ -16,14 +16,19 @@
 #include <glm/geometric.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+// imgui
+#include <imgui.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui_impl_sdl.h>
+
 namespace gm
 {
 namespace state
 {
 PlayerVsPlayerState::PlayerVsPlayerState(Game *game)
-    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mBoardSize(0, 0), mPickedIndex(-1),
-      mConnectIndex(-1), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 4 - 50, 100)),
-                                          eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x - (mGame->getWindowSize().x / 4) - 50, 100))}
+    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mGameFinished(false), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mBoardSize(0, 0), mPickedIndex(-1),
+      mConnectIndex(-1), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 700)), eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 100))},
+      mPlayerColors{glm::vec3(255, 255, 255), glm::vec3(0, 0, 0)}
 {
 }
 PlayerVsPlayerState::PlayerVsPlayerState(Game *game, int n, int m) : PlayerVsPlayerState(game)
@@ -210,15 +215,17 @@ int PlayerVsPlayerState::init()
         }
     }
 
+    mPlayerColors[0] = utils::gl::parseHexRGB("#6495ed");
+    mPlayerColors[1] = utils::gl::parseHexRGB("#f08080");
+
     utils::log::debug("loaded needed character bitmaps");
 
     // setup initial text
-    mPlayerScoreText[0].Color = utils::gl::parseHexRGB("#6495ed");
+    mPlayerScoreText[0].Color = mPlayerColors[0];
     mPlayerScoreText[0].setText("0");
     mPlayerScoreText[0].Scale = 0.5;
 
-    mPlayerScoreText[1].Color = utils::gl::parseHexRGB("#f08080");
-    std::cout << glm::to_string(mPlayerScoreText[1].Color) << std::endl;
+    mPlayerScoreText[1].Color = mPlayerColors[1];
     mPlayerScoreText[1].setText("0");
     mPlayerScoreText[1].Scale = 0.5;
 
@@ -245,139 +252,150 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
 {
     int error = 0;
 
-    if (event.type == SDL_WINDOWEVENT)
+    if (mGameFinished)
     {
-        if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-        {
-            mRecalculateDotsPositions(glm::vec2(event.window.data1, event.window.data2));
-            glViewport(0, 0, event.window.data1, event.window.data2);
-        }
+        // imgui
+        ImGui_ImplSDL2_ProcessEvent(&event);
     }
-    else if (event.type == SDL_MOUSEMOTION)
+    else
     {
-        auto x = event.motion.x;
-        auto y = event.motion.y;
-
-        auto xrel = event.motion.xrel;
-        auto yrel = event.motion.yrel;
-
-        for (int i = 0; i < mBoardSize.x; i++)
+        if (event.type == SDL_WINDOWEVENT)
         {
-            for (int j = 0; j < mBoardSize.y; j++)
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
             {
-                if (glm::distance(glm::vec2(x, y), mDots[i][j].Position) < mDots[i][j].Size)
-                {
-                    mDots[i][j].Hovered = true;
-                }
-                else
-                {
-                    mDots[i][j].Hovered = false;
-                }
+                mRecalculateDotsPositions(glm::vec2(event.window.data1, event.window.data2));
+                glViewport(0, 0, event.window.data1, event.window.data2);
             }
         }
-        if (mNewLine && mPickedDot && !mConnectDot)
+        else if (event.type == SDL_MOUSEMOTION)
         {
-            mNewLine->EndPosition = glm::vec2(event.motion.x, event.motion.y);
-            mNewLine->windowResize(mGame->getWindowSize());
-        }
-    }
-    else if (event.type == SDL_MOUSEBUTTONDOWN)
-    {
-        // mouse pressed -> check for the hovered dot and draw a line from that dot up until the mouse position
-        utils::log::debug("mouse down");
-        mPickedDot = mGetHoveredDot();
-        if (mPickedDot != nullptr)
-        {
-            mNewLine = new eng::draw::Line();
+            auto x = event.motion.x;
+            auto y = event.motion.y;
 
-            utils::log::debug("adding new line");
-            utils::log::debug("setting line buffers");
-            mNewLine->setupBuffers();
+            auto xrel = event.motion.xrel;
+            auto yrel = event.motion.yrel;
 
-            if (error)
+            for (int i = 0; i < mBoardSize.x; i++)
             {
-                utils::log::debug("unable to setup line buffers");
-                return -1;
-            }
-            utils::log::debug("setting properties");
-
-            mNewLine->Height = 1.5f;
-            mNewLine->Color = glm::vec3(32, 32, 32);
-            mNewLine->ConnectedDots.first = mPickedDot;
-            mNewLine->StartPosition = mNewLine->EndPosition = mPickedDot->Position;
-        }
-    }
-    else if (event.type == SDL_MOUSEBUTTONUP)
-    {
-        // mouse released -> check for hovered dot and connect if possible the picked and connect dots
-        utils::log::debug("mouse up");
-        mConnectDot = mGetHoveredDot();
-        if (mConnectDot != nullptr && mPickedDot != nullptr)
-        {
-            utils::log::debug("picked + connect valid - setting positions");
-            if (mPickedDot->Position == mConnectDot->Position)
-            {
-                // same dot -> do nothing, just release
-                mPickedDot = nullptr;
-                mConnectDot = nullptr;
-
-                utils::log::debug("same dot - ignore");
-                delete mNewLine;
-                mNewLine = nullptr;
-            }
-            else
-            {
-                // check if able to connect
-                if ((mPickedDot->Position.x == mConnectDot->Position.x && mPickedDot->Position.y != mConnectDot->Position.y &&
-                     glm::abs(glm::abs(mPickedDot->Position.y - mConnectDot->Position.y) - mDotsDistance.y) < 1.0f) ||
-                    ((mPickedDot->Position.y == mConnectDot->Position.y && mPickedDot->Position.x != mConnectDot->Position.x &&
-                      glm::abs(glm::abs(mPickedDot->Position.x - mConnectDot->Position.x) - mDotsDistance.x) < 1.0f)))
+                for (int j = 0; j < mBoardSize.y; j++)
                 {
-                    utils::log::debug("dots distance: %f", mDotsDistance.y);
-                    utils::log::debug("dots real distance: %f", glm::abs(mPickedDot->Position.y - mConnectDot->Position.y));
-                    utils::log::debug("normal line - adding fully to the collection");
-
-                    mNewLine->EndPosition = mConnectDot->Position;
-                    mNewLine->ConnectedDots.second = mConnectDot;
-                    mNewLine->windowResize(mGame->getWindowSize());
-                    mLines.push_back(mNewLine);
-                    mNewLine = nullptr;
-
-                    utils::log::debug("picked = %d, connect = %d", mPickedIndex, mConnectIndex);
-                    mAdjencyMatrix[mPickedIndex][mConnectIndex] = true;
-                    mAdjencyMatrix[mConnectIndex][mPickedIndex] = true;
-                    bool any_new = mCheckForNewBoxes();
-                    if (!any_new)
+                    if (glm::distance(glm::vec2(x, y), mDots[i][j].Position) < mDots[i][j].Size)
                     {
-                        mCurrentPlayer = !mCurrentPlayer;
+                        mDots[i][j].Hovered = true;
+                    }
+                    else
+                    {
+                        mDots[i][j].Hovered = false;
                     }
                 }
-                else
+            }
+            if (mNewLine && mPickedDot && !mConnectDot)
+            {
+                mNewLine->EndPosition = glm::vec2(event.motion.x, event.motion.y);
+                mNewLine->windowResize(mGame->getWindowSize());
+            }
+        }
+        else if (event.type == SDL_MOUSEBUTTONDOWN)
+        {
+            // mouse pressed -> check for the hovered dot and draw a line from that dot up until the mouse position
+            utils::log::debug("mouse down");
+            mPickedDot = mGetHoveredDot();
+            if (mPickedDot != nullptr)
+            {
+                mNewLine = new eng::draw::Line();
+
+                utils::log::debug("adding new line");
+                utils::log::debug("setting line buffers");
+                mNewLine->setupBuffers();
+
+                if (error)
                 {
-                    utils::log::debug("unable to connect cross");
+                    utils::log::debug("unable to setup line buffers");
+                    return -1;
+                }
+                utils::log::debug("setting properties");
+
+                mNewLine->Height = 1.5f;
+                mNewLine->Color = mPlayerColors[mCurrentPlayer];
+                mNewLine->ConnectedDots.first = mPickedDot;
+                mNewLine->StartPosition = mNewLine->EndPosition = mPickedDot->Position;
+            }
+        }
+        else if (event.type == SDL_MOUSEBUTTONUP)
+        {
+            // mouse released -> check for hovered dot and connect if possible the picked and connect dots
+            utils::log::debug("mouse up");
+            mConnectDot = mGetHoveredDot();
+            if (mConnectDot != nullptr && mPickedDot != nullptr)
+            {
+                utils::log::debug("picked + connect valid - setting positions");
+                if (mPickedDot->Position == mConnectDot->Position)
+                {
+                    // same dot -> do nothing, just release
+                    mPickedDot = nullptr;
+                    mConnectDot = nullptr;
+
+                    utils::log::debug("same dot - ignore");
                     delete mNewLine;
                     mNewLine = nullptr;
                 }
+                else
+                {
+                    // check if able to connect
+                    if ((mPickedDot->Position.x == mConnectDot->Position.x && mPickedDot->Position.y != mConnectDot->Position.y &&
+                         glm::abs(glm::abs(mPickedDot->Position.y - mConnectDot->Position.y) - mDotsDistance.y) < 1.0f) ||
+                        ((mPickedDot->Position.y == mConnectDot->Position.y && mPickedDot->Position.x != mConnectDot->Position.x &&
+                          glm::abs(glm::abs(mPickedDot->Position.x - mConnectDot->Position.x) - mDotsDistance.x) < 1.0f)))
+                    {
+                        utils::log::debug("dots distance: %f", mDotsDistance.y);
+                        utils::log::debug("dots real distance: %f", glm::abs(mPickedDot->Position.y - mConnectDot->Position.y));
+                        utils::log::debug("normal line - adding fully to the collection");
 
+                        mNewLine->EndPosition = mConnectDot->Position;
+                        mNewLine->ConnectedDots.second = mConnectDot;
+                        mNewLine->windowResize(mGame->getWindowSize());
+
+                        // change color to black/gray after drawing permanently
+                        mNewLine->Color = glm::vec3(52, 52, 52);
+                        mLines.push_back(mNewLine);
+                        mNewLine = nullptr;
+
+                        utils::log::debug("picked = %d, connect = %d", mPickedIndex, mConnectIndex);
+                        mAdjencyMatrix[mPickedIndex][mConnectIndex] = true;
+                        mAdjencyMatrix[mConnectIndex][mPickedIndex] = true;
+                        bool any_new = mCheckForNewBoxes();
+                        if (!any_new)
+                        {
+                            mCurrentPlayer = !mCurrentPlayer;
+                        }
+                    }
+                    else
+                    {
+                        utils::log::debug("unable to connect cross");
+                        delete mNewLine;
+                        mNewLine = nullptr;
+                    }
+
+                    mPickedDot = nullptr;
+                    mConnectDot = nullptr;
+                    mPickedIndex = -1;
+                    mConnectIndex = -1;
+                }
+            }
+            else if (mPickedDot != nullptr)
+            {
                 mPickedDot = nullptr;
                 mConnectDot = nullptr;
-                mPickedIndex = -1;
-                mConnectIndex = -1;
+                delete mNewLine;
+                mNewLine = nullptr;
             }
-        }
-        else if (mPickedDot != nullptr)
-        {
-            mPickedDot = nullptr;
-            mConnectDot = nullptr;
-            delete mNewLine;
-            mNewLine = nullptr;
-        }
-        else if (mConnectDot != nullptr)
-        {
-            mPickedDot = nullptr;
-            mConnectDot = nullptr;
-            delete mNewLine;
-            mNewLine = nullptr;
+            else if (mConnectDot != nullptr)
+            {
+                mPickedDot = nullptr;
+                mConnectDot = nullptr;
+                delete mNewLine;
+                mNewLine = nullptr;
+            }
         }
     }
 
@@ -386,6 +404,57 @@ int PlayerVsPlayerState::processEvent(SDL_Event &event)
 int PlayerVsPlayerState::processInput()
 {
     int error = 0;
+
+    if (mGameFinished)
+    {
+        std::string win_info;
+
+        if (mScores[0] > mScores[1])
+        {
+            win_info = "Player 1 won!";
+        }
+        else if (mScores[0] < mScores[1])
+        {
+            win_info = "Player 2 won!";
+        }
+        else
+        {
+            win_info = "It\'s a draw!";
+        }
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::SetNextWindowSize(ImVec2(400, 200));
+
+        ImGui::Begin("Game finished");
+        ImGui::Text("%s", win_info.c_str());
+        if (ImGui::Button("Restart", ImVec2(70, 20)))
+        {
+            utils::log::debug("restart the game: %dx%d", (int)mBoardSize.x - 1, (int)mBoardSize.y - 1);
+            auto new_state = new PlayerVsPlayerState(mGame, (int)mBoardSize.x - 1, (int)mBoardSize.y - 1);
+
+            error = new_state->init();
+            if (error)
+            {
+                utils::log::debug("unable to create new PvP state");
+                return error;
+            }
+
+            // TODO: test this more because of calling delete in popState() but member function is still on the stack..
+            mGame->popState();
+            mGame->pushState(new_state);
+        }
+
+        if (ImGui::Button("Main Menu", ImVec2(70, 20)))
+        {
+            utils::log::debug("returning to main menu");
+            mGame->popState();
+        }
+        ImGui::End();
+    }
+
     return error;
 }
 int PlayerVsPlayerState::draw()
@@ -448,6 +517,13 @@ int PlayerVsPlayerState::draw()
         {
             mPlaceholderColumnLines[i][j].draw(mLineShaderProgram);
         }
+    }
+
+    if (mGameFinished)
+    {
+        // menu for restart or main menu exit
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
     return error;
@@ -520,9 +596,9 @@ bool PlayerVsPlayerState::mCheckForNewBoxes()
     bool any_new = false;
     std::stringstream score_ss;
 
-    for (int i = 0; i < mBoardSize.y - 1; i++)
+    for (int i = 0; i < mBoardSize.x - 1; i++)
     {
-        for (int j = 0; j < mBoardSize.x - 1; j++)
+        for (int j = 0; j < mBoardSize.y - 1; j++)
         {
             if (mBoxes[i][j].Draw)
             {
@@ -539,7 +615,7 @@ bool PlayerVsPlayerState::mCheckForNewBoxes()
             if (mAdjencyMatrix[top_left][top_right] && mAdjencyMatrix[top_left][bottom_left] && mAdjencyMatrix[top_right][bottom_right] && mAdjencyMatrix[bottom_left][bottom_right])
             {
                 mBoxes[i][j].Draw = true;
-                mBoxes[i][j].Color = (!mCurrentPlayer) ? utils::gl::parseHexRGB("#6495ed") : utils::gl::parseHexRGB("#f08080");
+                mBoxes[i][j].Color = mPlayerColors[mCurrentPlayer];
                 any_new = true;
 
                 // setup score
@@ -553,7 +629,8 @@ bool PlayerVsPlayerState::mCheckForNewBoxes()
 
     if (mScores[0] + mScores[1] == ((mBoardSize.x - 1) * (mBoardSize.y - 1)))
     {
-        // all the boxes have been drawn -> game over -> print a winner
+        // all the boxes have been drawn -> game over -> print a winner -> use imgui on next render
+        mGameFinished = true;
     }
     return any_new;
 }

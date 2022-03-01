@@ -18,7 +18,7 @@ namespace gm
 {
 namespace state
 {
-MainMenu::MainMenu(Game *game) : State(game), mShowVsPlayerSizePicker(false), mShowVsCPUSizePicker(false), mNewFieldSize(3, 3)
+MainMenu::MainMenu(Game *game) : State(game), mShowVsPlayerSizePicker(false), mShowVsCPUSizePicker(false), mNewFieldSize(2, 2)
 {
 }
 
@@ -51,7 +51,6 @@ int MainMenu::processInput()
 
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkSize.x / 2 - 200, viewport->WorkSize.y / 2 - 100));
     ImGui::SetNextWindowSize(ImVec2(400, 200));
-    // ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
     ImGui::Begin("MainMenuWindow", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar);
 
@@ -92,8 +91,8 @@ int MainMenu::processInput()
         // get size of the field and start the game mode
         ImGui::Begin("Field size");
         ImGui::Text("Choose field size: ");
-        ImGui::SliderInt("N", &mNewFieldSize.x, 1, 6);
-        ImGui::SliderInt("M", &mNewFieldSize.y, 1, 6);
+        ImGui::SliderInt("N", &mNewFieldSize.x, 2, 6);
+        ImGui::SliderInt("M", &mNewFieldSize.y, 2, 6);
         if (ImGui::Button("Start", ImVec2(50, 20)))
         {
             utils::log::debug("start game: %dx%d", mNewFieldSize.x, mNewFieldSize.y);
@@ -105,39 +104,14 @@ int MainMenu::processInput()
             }
             else
             {
-                mGame->setPlayerVsPlayerState(new_state);
-                mGame->changeState(mGame->getPlayerVsPlayerState());
+                mGame->pushState(new_state);
             }
+
+            // remove after starting new game -> do not show after returning to the main menu
+            mShowVsPlayerSizePicker = false;
         }
         ImGui::End();
     }
-
-    // if (mShowVsCPUSizePicker)
-    // {
-    //     // get size of the field and start the game mode
-    //     ImGui::Begin("Field size");
-    //     ImGui::Text("Choose field size: ");
-    //     ImGui::SliderInt("N", &mNewFieldSize.x, 1, 6);
-    //     ImGui::SliderInt("M", &mNewFieldSize.y, 1, 6);
-    //     if (ImGui::Button("Start", ImVec2(50, 20)))
-    //     {
-    //         utils::log::debug("start game: %dx%d", mNewFieldSize.x, mNewFieldSize.y);
-    //         auto new_state = new gm::state::PlayerVsCPUState(mGame, mNewFieldSize.x, mNewFieldSize.y);
-    //         if (new_state->init())
-    //         {
-    //             // error
-    //             error = -1;
-    //         }
-    //         else
-    //         {
-    //             mGame->setPlayerVsPlayerState(new_state);
-    //             mGame->changeState(mGame->getPlayerVsPlayerState());
-    //         }
-    //     }
-    //     ImGui::End();
-    // }
-
-    // ImGui::PopStyleVar();
     return error;
 }
 
@@ -171,7 +145,6 @@ int MainMenu::draw()
 
     return error;
 }
-
 MainMenu::~MainMenu()
 {
 }
