@@ -30,6 +30,7 @@ add_executable(
     # game/state
     "src/game/state/main_menu.cpp"
     "src/game/state/pvp_state.cpp"
+    "src/game/state/pvc_state.cpp"
 
     # engine
 

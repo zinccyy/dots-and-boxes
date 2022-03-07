@@ -13,6 +13,7 @@
 
 // state
 #include <game/state/pvp_state.hpp>
+#include <game/state/pvc_state.hpp>
 
 namespace gm
 {
@@ -109,6 +110,33 @@ int MainMenu::processInput()
 
             // remove after starting new game -> do not show after returning to the main menu
             mShowVsPlayerSizePicker = false;
+        }
+        ImGui::End();
+    }
+
+    if (mShowVsCPUSizePicker)
+    {
+        // get size of the field and start the game mode
+        ImGui::Begin("Field size");
+        ImGui::Text("Choose field size: ");
+        ImGui::SliderInt("N", &mNewFieldSize.x, 2, 6);
+        ImGui::SliderInt("M", &mNewFieldSize.y, 2, 6);
+        if (ImGui::Button("Start", ImVec2(50, 20)))
+        {
+            utils::log::debug("start game: %dx%d", mNewFieldSize.x, mNewFieldSize.y);
+            auto new_state = new gm::state::PlayerVsCPUState(mGame, mNewFieldSize.x, mNewFieldSize.y);
+            if (new_state->init())
+            {
+                // error
+                error = -1;
+            }
+            else
+            {
+                mGame->pushState(new_state);
+            }
+
+            // remove after starting new game -> do not show after returning to the main menu
+            mShowVsCPUSizePicker = false;
         }
         ImGui::End();
     }
