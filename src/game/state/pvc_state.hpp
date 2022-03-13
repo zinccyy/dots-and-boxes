@@ -9,6 +9,7 @@
 #include <engine/drawable/text.hpp>
 
 #include <utils/gl/shader_program.hpp>
+#include <utils/ds/board.hpp>
 
 #include <vector>
 #include <memory>
@@ -18,11 +19,17 @@ namespace gm
 {
 namespace state
 {
+enum class GameLevel
+{
+    Easy = 0,
+    Medium,
+    Hard,
+};
 class PlayerVsCPUState : public State
 {
   public:
     PlayerVsCPUState(Game *game);
-    PlayerVsCPUState(Game *game, int n, int m);
+    PlayerVsCPUState(Game *game, int n, int m, GameLevel level);
 
     int init() override;
     int processEvent(SDL_Event &event) override;
@@ -38,6 +45,9 @@ class PlayerVsCPUState : public State
     // returns true if any new boxes have been drawn -> current player keeps the turn
     bool mCheckForNewBoxes();
 
+    // use minmax to decide on the best move
+    int mCPUDrawLine();
+
     // fetch currently hovered dot -> nullptr if no dot is hovered
     eng::draw::Dot *mGetHoveredDot();
 
@@ -50,8 +60,6 @@ class PlayerVsCPUState : public State
     // shadowed lines which are present until the line is drawn
     std::vector<std::vector<eng::draw::Line>> mPlaceholderRowLines;
     std::vector<std::vector<eng::draw::Line>> mPlaceholderColumnLines;
-
-    std::vector<std::vector<bool>> mAdjencyMatrix;
 
     // draw lines
     std::vector<eng::draw::Line *> mLines;
@@ -73,9 +81,6 @@ class PlayerVsCPUState : public State
 
     // separate distances for the dots - x and y values
     glm::vec2 mDotsDistance;
-
-    // N x M boxes
-    glm::vec2 mBoardSize;
 
     // 0 or 1
     bool mCurrentPlayer;
@@ -104,6 +109,12 @@ class PlayerVsCPUState : public State
 
     // colors
     std::array<glm::vec3, 2> mPlayerColors;
+
+    // board data structure - used for minimax algorithm implementation
+    utils::ds::Board mBoard;
+
+    // CPU level
+    GameLevel mLevel;
 };
 } // namespace state
 } // namespace gm

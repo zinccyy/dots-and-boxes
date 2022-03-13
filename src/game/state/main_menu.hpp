@@ -1,6 +1,7 @@
 #pragma once
 
 #include <game/state.hpp>
+#include <game/state/pvc_state.hpp>
 
 #include <glm/glm.hpp>
 
@@ -34,6 +35,7 @@ class MainMenu : public State
     bool mShowVsCPUSizePicker;
 
     glm::ivec2 mNewFieldSize;
+    GameLevel mCPULevel;
 };
 } // namespace state
 } // namespace gm

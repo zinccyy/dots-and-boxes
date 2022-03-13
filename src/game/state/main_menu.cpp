@@ -19,7 +19,7 @@ namespace gm
 {
 namespace state
 {
-MainMenu::MainMenu(Game *game) : State(game), mShowVsPlayerSizePicker(false), mShowVsCPUSizePicker(false), mNewFieldSize(2, 2)
+MainMenu::MainMenu(Game *game) : State(game), mShowVsPlayerSizePicker(false), mShowVsCPUSizePicker(false), mNewFieldSize(2, 2), mCPULevel(GameLevel::Medium)
 {
 }
 
@@ -121,10 +121,16 @@ int MainMenu::processInput()
         ImGui::Text("Choose field size: ");
         ImGui::SliderInt("N", &mNewFieldSize.x, 2, 6);
         ImGui::SliderInt("M", &mNewFieldSize.y, 2, 6);
+        const char *level_names[] = {
+            "Easy",
+            "Medium",
+            "Hard",
+        };
+        ImGui::SliderInt("Level", (int *)&mCPULevel, 0, 2, level_names[(int)mCPULevel]);
         if (ImGui::Button("Start", ImVec2(50, 20)))
         {
             utils::log::debug("start game: %dx%d", mNewFieldSize.x, mNewFieldSize.y);
-            auto new_state = new gm::state::PlayerVsCPUState(mGame, mNewFieldSize.x, mNewFieldSize.y);
+            auto new_state = new gm::state::PlayerVsCPUState(mGame, mNewFieldSize.x, mNewFieldSize.y, mCPULevel);
             if (new_state->init())
             {
                 // error

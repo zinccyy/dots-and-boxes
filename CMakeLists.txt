@@ -27,6 +27,9 @@ add_executable(
     "src/utils/gl/shader_program.cpp"
     "src/utils/gl/gl.cpp"
 
+    # utils/ds
+    "src/utils/ds/board.cpp"
+
     # game/state
     "src/game/state/main_menu.cpp"
     "src/game/state/pvp_state.cpp"
