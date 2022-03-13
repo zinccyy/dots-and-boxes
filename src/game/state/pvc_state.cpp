@@ -26,7 +26,7 @@ namespace gm
 namespace state
 {
 PlayerVsCPUState::PlayerVsCPUState(Game *game)
-    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mGameFinished(false), mNewLine(nullptr), mCurrentPlayer(0), mScores({0, 0}), mPickedIndex(-1),
+    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mGameFinished(false), mNewLine(nullptr), mCurrentPlayer(0), mPickedIndex(-1),
       mConnectIndex(-1), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 700)), eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 100))},
       mPlayerColors{glm::vec3(255, 255, 255), glm::vec3(0, 0, 0)}
 {
@@ -349,16 +349,16 @@ int PlayerVsCPUState::processEvent(SDL_Event &event)
                         mNewLine = nullptr;
 
                         utils::log::debug("picked = %d, connect = %d", mPickedIndex, mConnectIndex);
-                        mBoard.AdjencyMatrix[mPickedIndex][mConnectIndex] = true;
-                        mBoard.AdjencyMatrix[mConnectIndex][mPickedIndex] = true;
+                        mBoard.move({mPickedIndex, mConnectIndex});
+
                         bool any_new = mCheckForNewBoxes();
                         if (!any_new)
                         {
                             mCurrentPlayer = !mCurrentPlayer;
-                        }
 
-                        // immediately after a player draws a line -> make CPU decide and draw a line
-                        mCPUDrawLine();
+                            // immediately after a player draws a line -> make CPU decide and draw a line
+                            mCPUDrawLine();
+                        }
                     }
                     else
                     {
@@ -400,13 +400,13 @@ int PlayerVsCPUState::processInput()
     {
         std::string win_info;
 
-        if (mScores[0] > mScores[1])
+        if (mBoard.Scores[0] > mBoard.Scores[1])
         {
             win_info = "Player 1 won!";
         }
-        else if (mScores[0] < mScores[1])
+        else if (mBoard.Scores[0] < mBoard.Scores[1])
         {
-            win_info = "Player 2 won!";
+            win_info = "CPU won!";
         }
         else
         {
@@ -610,16 +610,18 @@ bool PlayerVsCPUState::mCheckForNewBoxes()
                 mBoxes[i][j].Color = mPlayerColors[mCurrentPlayer];
                 any_new = true;
 
+                utils::log::debug("New box found (%d,%d,%d,%d)", top_left, top_right, bottom_left, bottom_right);
+
                 // setup score
-                mScores[mCurrentPlayer]++;
-                score_ss << mScores[mCurrentPlayer];
+                mBoard.Scores[mCurrentPlayer]++;
+                score_ss << mBoard.Scores[mCurrentPlayer];
                 mPlayerScoreText[mCurrentPlayer].setText(score_ss.str());
                 score_ss.str("");
             }
         }
     }
 
-    if (mScores[0] + mScores[1] == ((mBoard.N - 1) * (mBoard.M - 1)))
+    if (mBoard.Scores[0] + mBoard.Scores[1] == ((mBoard.N - 1) * (mBoard.M - 1)))
     {
         // all the boxes have been drawn -> game over -> print a winner -> use imgui on next render
         mGameFinished = true;
@@ -645,8 +647,12 @@ int PlayerVsCPUState::mCPUDrawLine()
 
     mNewLine->Height = 1.5f;
     mNewLine->Color = glm::vec3(52, 52, 52);
-    mPickedIndex = 0;
-    mConnectIndex = 3;
+
+    // use minimax algorithm to draw best possible line
+    auto line = mBoard.minimax();
+
+    mPickedIndex = line.first;
+    mConnectIndex = line.second;
 
     auto mp_row = mPickedIndex / (int)mBoard.N;
     auto mp_col = mPickedIndex % (int)mBoard.M;
@@ -667,13 +673,17 @@ int PlayerVsCPUState::mCPUDrawLine()
     mLines.push_back(mNewLine);
     mNewLine = nullptr;
 
-    utils::log::debug("picked = %d, connect = %d", 0, 1);
-    mBoard.AdjencyMatrix[mPickedIndex][mConnectIndex] = true;
-    mBoard.AdjencyMatrix[mConnectIndex][mPickedIndex] = true;
+    utils::log::debug("picked = %d, connect = %d", line.first, line.second);
+
     bool any_new = mCheckForNewBoxes();
     if (!any_new)
     {
         mCurrentPlayer = !mCurrentPlayer;
+    }
+    else
+    {
+        // keep drawing until no new box has been found
+        mCPUDrawLine();
     }
 
     return error;
