@@ -38,6 +38,7 @@ std::pair<Line, int> minimax_alg(Board &board, int depth, bool maximize)
 
         // move with available line
         tmp_board.move(line);
+        tmp_board.checkForNewBoxes();
 
         auto heuristic_value = staticEvaluate(tmp_board);
         if (maximize)
@@ -100,6 +101,7 @@ Board::Board(int n, int m)
     N = n;
     M = m;
     Over = false;
+    CurrentPlayer = false;
 
     // set player scores to 0
     Scores = {0};
@@ -110,6 +112,7 @@ Board::Board(int n, int m)
 
     // init adjency matrix to 0
     AdjencyMatrix = {false};
+    Boxes = {false};
 
     // generate available lines to pick - state for the minimax algorithm
     for (int i = 0; i < this->N - 1; i++)
@@ -149,7 +152,7 @@ Line Board::minimax()
 
     utils::log::debug("start score: (%d, %d)", Scores[0], Scores[1]);
 
-    line = minimax_alg(*this, 3, true).first;
+    line = minimax_alg(*this, 5, true).first;
     utils::log::debug("calculated line: (%d, %d)", line.first, line.second);
 
     move(line);
@@ -167,6 +170,46 @@ void Board::move(Line line)
     // configure adjency matrix
     AdjencyMatrix[line.first][line.second] = true;
     AdjencyMatrix[line.second][line.first] = true;
+}
+bool Board::checkForNewBoxes()
+{
+    bool any_new = false;
+
+    for (int i = 0; i < N - 1; i++)
+    {
+        for (int j = 0; j < M - 1; j++)
+        {
+            if (Boxes[i][j])
+            {
+                // box is already drawn
+                continue;
+            }
+
+            const int top_left = M * i + j;
+            const int top_right = M * i + (j + 1);
+            const int bottom_left = M * (i + 1) + j;
+            const int bottom_right = M * (i + 1) + (j + 1);
+
+            // check if a box is formed
+            if (AdjencyMatrix[top_left][top_right] && AdjencyMatrix[top_left][bottom_left] && AdjencyMatrix[top_right][bottom_right] && AdjencyMatrix[bottom_left][bottom_right])
+            {
+                Boxes[i][j] = true;
+                any_new = true;
+
+                utils::log::debug("New box found (%d,%d,%d,%d)", top_left, top_right, bottom_left, bottom_right);
+
+                // CPU score
+                Scores[CurrentPlayer]++;
+            }
+        }
+    }
+
+    if (Scores[0] + Scores[1] == ((N - 1) * (M - 1)))
+    {
+        // all the boxes have been drawn -> game over -> print a winner -> use imgui on next render
+        Over = true;
+    }
+    return any_new;
 }
 } // namespace ds
 } // namespace utils

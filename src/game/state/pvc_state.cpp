@@ -26,7 +26,7 @@ namespace gm
 namespace state
 {
 PlayerVsCPUState::PlayerVsCPUState(Game *game)
-    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mGameFinished(false), mNewLine(nullptr), mCurrentPlayer(0), mPickedIndex(-1),
+    : State(game), mPickedDot(nullptr), mConnectDot(nullptr), mGameFinished(false), mNewLine(nullptr), mPickedIndex(-1),
       mConnectIndex(-1), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 700)), eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 100))},
       mPlayerColors{glm::vec3(255, 255, 255), glm::vec3(0, 0, 0)}
 {
@@ -304,7 +304,7 @@ int PlayerVsCPUState::processEvent(SDL_Event &event)
                 utils::log::debug("setting properties");
 
                 mNewLine->Height = 1.5f;
-                mNewLine->Color = mPlayerColors[mCurrentPlayer];
+                mNewLine->Color = mPlayerColors[mBoard.CurrentPlayer];
                 mNewLine->ConnectedDots.first = mPickedDot;
                 mNewLine->StartPosition = mNewLine->EndPosition = mPickedDot->Position;
             }
@@ -354,7 +354,7 @@ int PlayerVsCPUState::processEvent(SDL_Event &event)
                         bool any_new = mCheckForNewBoxes();
                         if (!any_new)
                         {
-                            mCurrentPlayer = !mCurrentPlayer;
+                            mBoard.CurrentPlayer = !mBoard.CurrentPlayer;
 
                             // immediately after a player draws a line -> make CPU decide and draw a line
                             mCPUDrawLine();
@@ -607,15 +607,16 @@ bool PlayerVsCPUState::mCheckForNewBoxes()
                 mBoard.AdjencyMatrix[bottom_left][bottom_right])
             {
                 mBoxes[i][j].Draw = true;
-                mBoxes[i][j].Color = mPlayerColors[mCurrentPlayer];
+                mBoxes[i][j].Color = mPlayerColors[mBoard.CurrentPlayer];
                 any_new = true;
 
                 utils::log::debug("New box found (%d,%d,%d,%d)", top_left, top_right, bottom_left, bottom_right);
 
                 // setup score
-                mBoard.Scores[mCurrentPlayer]++;
-                score_ss << mBoard.Scores[mCurrentPlayer];
-                mPlayerScoreText[mCurrentPlayer].setText(score_ss.str());
+
+                mBoard.Scores[mBoard.CurrentPlayer]++;
+                score_ss << mBoard.Scores[mBoard.CurrentPlayer];
+                mPlayerScoreText[mBoard.CurrentPlayer].setText(score_ss.str());
                 score_ss.str("");
             }
         }
@@ -678,7 +679,7 @@ int PlayerVsCPUState::mCPUDrawLine()
     bool any_new = mCheckForNewBoxes();
     if (!any_new)
     {
-        mCurrentPlayer = !mCurrentPlayer;
+        mBoard.CurrentPlayer = !mBoard.CurrentPlayer;
     }
     else
     {

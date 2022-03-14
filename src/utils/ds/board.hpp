@@ -14,16 +14,19 @@ struct Board
     int N;
     int M;
     bool Over;
+    bool CurrentPlayer;
 
     // alpha/beta pruning - minimax
     int Alpha;
     int Beta;
 
     // max board size: 6x6 boxes = (6+1)^2 dots
-    const static int MAX_DOTS = 49;
+    const static int MAX_BOXES = 6;
+    const static int MAX_DOTS = (MAX_BOXES + 1) * (MAX_BOXES + 1);
 
     std::array<int, 2> Scores;
     std::array<std::array<bool, MAX_DOTS>, MAX_DOTS> AdjencyMatrix;
+    std::array<std::array<bool, MAX_BOXES>, MAX_BOXES> Boxes;
     std::list<Line> AvailableLines;
 
     Board();
@@ -34,6 +37,7 @@ struct Board
 
     // create move with the given line
     void move(Line line);
+    bool checkForNewBoxes();
 };
 } // namespace ds
 } // namespace utils
