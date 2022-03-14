@@ -1,4 +1,5 @@
 #include "utils/log.hpp"
+#include <algorithm>
 #include <utility>
 #include <utils/ds/board.hpp>
 
@@ -8,20 +9,11 @@ namespace utils
 {
 namespace ds
 {
-std::pair<Line, int> minimax_alg(Board &board, int depth, bool maximize);
+std::pair<Line, int8_t> minimax_alg(Board &board, int depth, bool maximize, int8_t alpha = -100, int8_t beta = 100);
 int staticEvaluate(Board &board);
-std::pair<Line, int> minimax_alg(Board &board, int depth, bool maximize)
+std::pair<Line, int8_t> minimax_alg(Board &board, int depth, bool maximize, int8_t alpha, int8_t beta)
 {
-    std::pair<Line, int> move;
-
-    if (maximize)
-    {
-        move = {{-1, -1}, -10000};
-    }
-    else
-    {
-        move = {{-1, -1}, 10000};
-    }
+    std::pair<Line, int8_t> move = {{-1, -1}, 0};
 
     if (depth == 0 || board.Over)
     {
@@ -29,61 +21,78 @@ std::pair<Line, int> minimax_alg(Board &board, int depth, bool maximize)
         return move;
     }
 
-    for (auto line : board.AvailableLines)
+    if (maximize)
     {
-        utils::log::debug("trying line (%d, %d)", line.first, line.second);
-
-        // clone board
-        auto tmp_board = board;
-
-        // move with available line
-        tmp_board.move(line);
-        tmp_board.checkForNewBoxes();
-
-        auto heuristic_value = staticEvaluate(tmp_board);
-        if (maximize)
+        utils::log::debug("MAX");
+        move.second = -100;
+        for (auto line : board.AvailableLines)
         {
-            if (heuristic_value >= tmp_board.Beta)
-            {
-                move = {line, heuristic_value};
-                break;
-            }
-            else
-            {
-                tmp_board.Alpha = std::max(tmp_board.Alpha, heuristic_value);
-            }
-        }
-        else
-        {
-            if (heuristic_value <= tmp_board.Alpha)
-            {
-                move = {line, heuristic_value};
-                break;
-            }
-            else
-            {
-                tmp_board.Beta = std::max(tmp_board.Beta, heuristic_value);
-            }
-        }
+            utils::log::debug("trying line (%d, %d)", line.first, line.second);
 
-        // evaluate position
-        auto eval = minimax_alg(tmp_board, depth - 1, !maximize);
+            auto new_board = board;
+            new_board.Simulation = true;
 
-        // update best move
-        if (maximize)
-        {
+            new_board.move(line);
+            auto any_new = new_board.checkForNewBoxes();
+            if (!any_new)
+            {
+                // no new boxes found -> player loses turn
+                new_board.CurrentPlayer = !new_board.CurrentPlayer;
+            }
+
+            auto eval = minimax_alg(new_board, depth - 1, !maximize, alpha, beta);
             if (eval.second > move.second)
             {
+                // utils::log::debug("found better option for higher: %d - %d -> (%d, %d)", eval.second, move.second, line.first, line.second);
                 move = {line, eval.second};
             }
+            alpha = std::max(alpha, eval.second);
+            if (beta <= alpha)
+            {
+                break;
+            }
         }
-        else
+    }
+    else
+    {
+        utils::log::debug("MIN");
+        move.second = 100;
+        for (auto line : board.AvailableLines)
         {
+            utils::log::debug("trying line (%d, %d)", line.first, line.second);
+
+            auto new_board = board;
+            new_board.Simulation = true;
+
+            new_board.move(line);
+            auto any_new = new_board.checkForNewBoxes();
+            if (!any_new)
+            {
+                // no new boxes found -> player loses turn
+                new_board.CurrentPlayer = !new_board.CurrentPlayer;
+            }
+
+            auto eval = minimax_alg(new_board, depth - 1, !maximize, alpha, beta);
             if (eval.second < move.second)
             {
+                // utils::log::debug("found better option for lower: %d - %d -> (%d, %d)", eval.second, move.second, line.first, line.second);
                 move = {line, eval.second};
             }
+            beta = std::min(beta, eval.second);
+            if (beta <= alpha)
+            {
+                break;
+            }
         }
+    }
+
+    if (maximize)
+    {
+        utils::log::debug("Max value gathered: (%d, %d) = %d: %d", move.first.first, move.first.second, move.second, depth);
+    }
+    else
+    {
+        utils::log::debug("Min value gathered: (%d, %d) = %d: %d", move.first.first, move.first.second, move.second, depth);
     }
 
     return move;
@@ -102,17 +111,16 @@ Board::Board(int n, int m)
     M = m;
     Over = false;
     CurrentPlayer = false;
+    Simulation = false;
 
     // set player scores to 0
     Scores = {0};
 
-    // alpha/beta pruning
-    Alpha = -10000;
-    Beta = 10000;
-
     // init adjency matrix to 0
     AdjencyMatrix = {false};
     Boxes = {false};
+
+    utils::log::debug("NxM = %dx%d", N, M);
 
     // generate available lines to pick - state for the minimax algorithm
     for (int i = 0; i < this->N - 1; i++)
@@ -127,16 +135,21 @@ Board::Board(int n, int m)
             this->AvailableLines.push_back(std::make_pair(top_left, top_right));
             this->AvailableLines.push_back(std::make_pair(top_left, bottom_left));
 
+            utils::log::debug("line added: (%d, %d)", top_left, top_right);
+            utils::log::debug("line added: (%d, %d)", top_left, bottom_left);
+
             if (j == this->M - 2)
             {
                 // last col -> add right side
                 this->AvailableLines.push_back(std::make_pair(top_right, bottom_right));
+                utils::log::debug("line added: (%d, %d)", top_right, bottom_right);
             }
 
             if (i == this->N - 2)
             {
                 // last row -> add bottom side
                 this->AvailableLines.push_back(std::make_pair(bottom_left, bottom_right));
+                utils::log::debug("line added: (%d, %d)", bottom_left, bottom_right);
             }
         }
     }
@@ -152,8 +165,15 @@ Line Board::minimax()
 
     utils::log::debug("start score: (%d, %d)", Scores[0], Scores[1]);
 
-    line = minimax_alg(*this, 5, true).first;
+    line = minimax_alg(*this, 3, true).first;
+
     utils::log::debug("calculated line: (%d, %d)", line.first, line.second);
+
+    if (line == Line{-1, -1})
+    {
+        // pick any from the list of available because the choice wasn't made
+        line = AvailableLines.back();
+    }
 
     move(line);
 
@@ -196,17 +216,18 @@ bool Board::checkForNewBoxes()
                 Boxes[i][j] = true;
                 any_new = true;
 
-                utils::log::debug("New box found (%d,%d,%d,%d)", top_left, top_right, bottom_left, bottom_right);
+                utils::log::debug("Player %d++ -> (%d, %d, %d, %d)", CurrentPlayer, top_left, top_right, bottom_left, bottom_right);
 
-                // CPU score
-                Scores[CurrentPlayer]++;
+                if (Simulation)
+                {
+                    Scores[CurrentPlayer]++;
+                }
             }
         }
     }
 
     if (Scores[0] + Scores[1] == ((N - 1) * (M - 1)))
     {
-        // all the boxes have been drawn -> game over -> print a winner -> use imgui on next render
         Over = true;
     }
     return any_new;

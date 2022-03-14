@@ -15,13 +15,14 @@ struct Board
     int M;
     bool Over;
     bool CurrentPlayer;
+    bool Simulation;
 
     // alpha/beta pruning - minimax
     int Alpha;
     int Beta;
 
     // max board size: 6x6 boxes = (6+1)^2 dots
-    const static int MAX_BOXES = 6;
+    const static int MAX_BOXES = 5;
     const static int MAX_DOTS = (MAX_BOXES + 1) * (MAX_BOXES + 1);
 
     std::array<int, 2> Scores;

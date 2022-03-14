@@ -655,9 +655,9 @@ int PlayerVsCPUState::mCPUDrawLine()
     mPickedIndex = line.first;
     mConnectIndex = line.second;
 
-    auto mp_row = mPickedIndex / (int)mBoard.N;
+    auto mp_row = mPickedIndex / (int)mBoard.M;
     auto mp_col = mPickedIndex % (int)mBoard.M;
-    auto mc_row = mConnectIndex / (int)mBoard.N;
+    auto mc_row = mConnectIndex / (int)mBoard.M;
     auto mc_col = mConnectIndex % (int)mBoard.M;
 
     utils::log::debug("coordinates to connect : (%d, %d), (%d, %d)", mp_row, mp_col, mc_row, mc_col);
