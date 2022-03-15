@@ -13,6 +13,7 @@ std::pair<Line, int8_t> minimax_alg(Board &board, int depth, bool maximize, int8
 int staticEvaluate(Board &board);
 std::pair<Line, int8_t> minimax_alg(Board &board, int depth, bool maximize, int8_t alpha, int8_t beta)
 {
+    utils::log::debug("minimax called for player %d with depth %d", board.CurrentPlayer, depth);
     std::pair<Line, int8_t> move = {{-1, -1}, 0};
 
     if (depth == 0 || board.Over)
@@ -40,10 +41,11 @@ std::pair<Line, int8_t> minimax_alg(Board &board, int depth, bool maximize, int8
                 new_board.CurrentPlayer = !new_board.CurrentPlayer;
             }
 
-            auto eval = minimax_alg(new_board, depth - 1, !maximize, alpha, beta);
+            utils::log::debug("calling minimax for player %d with depth %d", new_board.CurrentPlayer, depth - 1);
+            auto eval = minimax_alg(new_board, depth - 1, new_board.CurrentPlayer, alpha, beta);
             if (eval.second > move.second)
             {
-                // utils::log::debug("found better option for higher: %d - %d -> (%d, %d)", eval.second, move.second, line.first, line.second);
+                utils::log::debug("found better option for higher: %d : %d -> (%d, %d)", eval.second, move.second, line.first, line.second);
                 move = {line, eval.second};
             }
             alpha = std::max(alpha, eval.second);
@@ -72,10 +74,10 @@ std::pair<Line, int8_t> minimax_alg(Board &board, int depth, bool maximize, int8
                 new_board.CurrentPlayer = !new_board.CurrentPlayer;
             }
 
-            auto eval = minimax_alg(new_board, depth - 1, !maximize, alpha, beta);
+            auto eval = minimax_alg(new_board, depth - 1, new_board.CurrentPlayer, alpha, beta);
             if (eval.second < move.second)
             {
-                // utils::log::debug("found better option for lower: %d - %d -> (%d, %d)", eval.second, move.second, line.first, line.second);
+                utils::log::debug("found better option for lower: %d : %d -> (%d, %d)", eval.second, move.second, line.first, line.second);
                 move = {line, eval.second};
             }
             beta = std::min(beta, eval.second);
@@ -165,7 +167,7 @@ Line Board::minimax()
 
     utils::log::debug("start score: (%d, %d)", Scores[0], Scores[1]);
 
-    line = minimax_alg(*this, 3, true).first;
+    line = minimax_alg(*this, 6, true).first;
 
     utils::log::debug("calculated line: (%d, %d)", line.first, line.second);
 
@@ -176,6 +178,8 @@ Line Board::minimax()
     }
 
     move(line);
+    utils::log::debug("testing for final boxes");
+    checkForNewBoxes();
 
     return line;
 }
