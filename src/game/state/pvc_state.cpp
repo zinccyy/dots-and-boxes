@@ -31,8 +31,8 @@ PlayerVsCPUState::PlayerVsCPUState(Game *game)
 }
 PlayerVsCPUState::PlayerVsCPUState(Game *game, int n, int m, GameLevel level) : PlayerVsCPUState(game)
 {
-    mBoardState = new BoardState(game, n + 1, m + 1);
     mLevel = level;
+    mBoardState = new BoardState(game, n + 1, m + 1, (int)mLevel + 1);
 }
 int PlayerVsCPUState::init()
 {

@@ -22,26 +22,6 @@ bool BoardStateData::checkForNewBoxes(int N, int M)
 {
     bool any_new = false;
 
-    // for (int i = 0; i < N; i++)
-    // {
-    //     for (int j = 0; j < M; j++)
-    //     {
-    //         printf("%d ", AdjencyMatrix[i][j]);
-    //     }
-    //     printf("\n");
-    // }
-
-    // printf("\n");
-
-    // for (int i = 0; i < N - 1; i++)
-    // {
-    //     for (int j = 0; j < M - 1; j++)
-    //     {
-    //         printf("%d ", BoxesDraw[i][j]);
-    //     }
-    //     printf("\n");
-    // }
-
     for (int i = 0; i < N - 1; i++)
     {
         for (int j = 0; j < M - 1; j++)
@@ -80,13 +60,14 @@ bool BoardStateData::checkForNewBoxes(int N, int M)
 
     return any_new;
 }
-BoardState::BoardState(Game *game) : State(game), PickedDot({-1, nullptr}), ConnectDot({-1, nullptr}), NewLine(nullptr), DotsDistance(0, 0)
+BoardState::BoardState(Game *game) : State(game), PickedDot({-1, nullptr}), ConnectDot({-1, nullptr}), NewLine(nullptr), DotsDistance(0, 0), mCPULevel(0)
 {
 }
-BoardState::BoardState(Game *game, int n, int m) : BoardState(game)
+BoardState::BoardState(Game *game, int n, int m, int cpu_level) : BoardState(game)
 {
     N = n;
     M = m;
+    mCPULevel = cpu_level;
 
     // setup colors
     PlayerColors[0] = utils::gl::parseHexRGB("#6495ed");
@@ -505,9 +486,6 @@ std::pair<LineIndices, int8_t> BoardState::mMiniMax(BoardStateData &state, uint8
     {
         // CPU
         move.second = -100;
-        for (auto line : state.AvailableLines)
-        {
-        }
 
         for (auto line : state.AvailableLines)
         {
@@ -587,7 +565,7 @@ int BoardState::mCPUDrawLine()
     NewLine->Color = glm::vec3(52, 52, 52);
 
     // use minimax algorithm to draw best possible line
-    auto line = mMiniMax(StateData, 4, -100, 100).first;
+    auto line = mMiniMax(StateData, mCPULevel, -100, 100).first;
 
     if (line == LineIndices{-1, -1})
     {

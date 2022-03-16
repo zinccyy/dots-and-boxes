@@ -22,8 +22,8 @@ namespace state
 enum class GameLevel
 {
     Easy = 0,
-    Medium,
-    Hard,
+    Medium = 1,
+    Hard = 2,
 };
 class PlayerVsCPUState : public State
 {

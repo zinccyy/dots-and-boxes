@@ -78,7 +78,7 @@ class BoardState : public gm::State
 
     // constructor - init all needed values
     BoardState(Game *game);
-    BoardState(Game *game, int n, int m);
+    BoardState(Game *game, int n, int m, int cpu_level);
 
     ~BoardState();
 
@@ -112,6 +112,9 @@ class BoardState : public gm::State
     utils::gl::ShaderProgram mDotShaderProgram;
     utils::gl::ShaderProgram mBoxShaderProgram;
     utils::gl::ShaderProgram mLineShaderProgram;
+
+    // easy, medium or hard
+    int mCPULevel;
 };
 } // namespace state
 } // namespace gm
