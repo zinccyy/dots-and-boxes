@@ -14,6 +14,7 @@
 // state
 #include <game/state/pvp_state.hpp>
 #include <game/state/pvc_state.hpp>
+#include <game/state/tmp_state.hpp>
 
 namespace gm
 {
@@ -130,6 +131,7 @@ int MainMenu::processInput()
         if (ImGui::Button("Start", ImVec2(50, 20)))
         {
             utils::log::debug("start game: %dx%d", mNewFieldSize.x, mNewFieldSize.y);
+            // auto new_state = new gm::state::TmpState(mGame);
             auto new_state = new gm::state::PlayerVsCPUState(mGame, mNewFieldSize.x, mNewFieldSize.y, mCPULevel);
             if (new_state->init())
             {
