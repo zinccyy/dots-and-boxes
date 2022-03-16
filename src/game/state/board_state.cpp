@@ -332,7 +332,7 @@ int BoardState::processEvent(SDL_Event &event)
                     if (!any_new)
                     {
                         StateData.CurrentPlayer = !StateData.CurrentPlayer;
-                        // mCPUDrawLine();
+                        mCPUDrawLine();
                     }
                     else
                     {
@@ -489,8 +489,10 @@ int BoardState::mHeuristicValue(BoardStateData &state)
 {
     return state.Scores[1] - state.Scores[0];
 }
-std::pair<LineIndices, uint8_t> BoardState::mMiniMax(BoardStateData &state, uint8_t depth, uint8_t alpha, uint8_t beta)
+std::pair<LineIndices, int8_t> BoardState::mMiniMax(BoardStateData &state, uint8_t depth, int8_t alpha, int8_t beta)
 {
+    // utils::log::debug("minimax called for player %d with depth %d", state.CurrentPlayer, depth);
+
     std::pair<LineIndices, int8_t> move = {{-1, -1}, 0};
 
     if (depth == 0 || state.GameOver)
@@ -505,6 +507,12 @@ std::pair<LineIndices, uint8_t> BoardState::mMiniMax(BoardStateData &state, uint
         move.second = -100;
         for (auto line : state.AvailableLines)
         {
+        }
+
+        for (auto line : state.AvailableLines)
+        {
+            // utils::log::debug("trying line (%d, %d)", line.first, line.second);
+
             auto new_state = state;
             new_state.pickLine(line);
             auto new_boxes = new_state.checkForNewBoxes(N, M);
@@ -512,6 +520,8 @@ std::pair<LineIndices, uint8_t> BoardState::mMiniMax(BoardStateData &state, uint
             {
                 new_state.CurrentPlayer = !new_state.CurrentPlayer;
             }
+
+            // utils::log::debug("calling minimax for player %d with depth %d", new_state.CurrentPlayer, depth - 1);
 
             auto eval = mMiniMax(new_state, depth - 1, alpha, beta);
             if (eval.second > move.second)
@@ -540,6 +550,7 @@ std::pair<LineIndices, uint8_t> BoardState::mMiniMax(BoardStateData &state, uint
                 new_state.CurrentPlayer = !new_state.CurrentPlayer;
             }
 
+            // utils::log::debug("calling minimax for player %d with depth %d", new_state.CurrentPlayer, depth - 1);
             auto eval = mMiniMax(new_state, depth - 1, alpha, beta);
             if (eval.second < move.second)
             {
@@ -576,7 +587,7 @@ int BoardState::mCPUDrawLine()
     NewLine->Color = glm::vec3(52, 52, 52);
 
     // use minimax algorithm to draw best possible line
-    auto line = mMiniMax(StateData, 2, -100, 100).first;
+    auto line = mMiniMax(StateData, 4, -100, 100).first;
 
     if (line == LineIndices{-1, -1})
     {
@@ -616,6 +627,17 @@ int BoardState::mCPUDrawLine()
     else
     {
         // keep drawing until no new box has been found
+        for (int i = 0; i < N - 1; i++)
+        {
+            for (int j = 0; j < M - 1; j++)
+            {
+                if (StateData.BoxesDraw[i][j] && !Boxes[i][j].Draw)
+                {
+                    Boxes[i][j].Draw = true;
+                    Boxes[i][j].Color = PlayerColors[StateData.CurrentPlayer];
+                }
+            }
+        }
         mCPUDrawLine();
     }
 

@@ -93,7 +93,7 @@ class BoardState : public gm::State
 
     // run minimax algorithm to get the best line option for CPU
     int mHeuristicValue(BoardStateData &state);
-    std::pair<LineIndices, uint8_t> mMiniMax(BoardStateData &state, uint8_t depth, uint8_t alpha, uint8_t beta);
+    std::pair<LineIndices, int8_t> mMiniMax(BoardStateData &state, uint8_t depth, int8_t alpha, int8_t beta);
 
     // use minimax algorithm to pick the best line for CPU
     int mCPUDrawLine();
