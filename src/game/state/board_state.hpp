@@ -5,6 +5,7 @@
 #include <engine/drawable.hpp>
 #include <engine/drawable/line.hpp>
 #include <engine/drawable/box.hpp>
+#include <engine/timer.hpp>
 
 #include <array>
 #include <map>
@@ -18,6 +19,25 @@ namespace gm
 {
 namespace state
 {
+enum class CPUDrawingAxis
+{
+    X,
+    Y
+};
+struct CPUDrawingInfo
+{
+    // is the CPU drawing along the X or Y axis
+    CPUDrawingAxis Axis;
+
+    // speed at which the line will be drawn
+    float Speed;
+
+    // is CPU drawing a line currently or not
+    bool Drawing;
+
+    // keep drawing because CPU still has moves left
+    bool KeepDrawing;
+};
 using LineIndices = std::pair<uint8_t, uint8_t>;
 // board scoring state, adjency matrix etc.
 struct BoardStateData
@@ -115,6 +135,9 @@ class BoardState : public gm::State
 
     // easy, medium or hard
     int mCPULevel;
+
+    CPUDrawingInfo mCPUDrawInfo;
+    eng::Timer mTimer;
 };
 } // namespace state
 } // namespace gm

@@ -202,6 +202,10 @@ int PlayerVsCPUState::processInput()
         }
         ImGui::End();
     }
+    else
+    {
+        error = mBoardState->processInput();
+    }
 
     return error;
 }

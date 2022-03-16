@@ -1,3 +1,4 @@
+#include <chrono>
 #include <game/state/board_state.hpp>
 #include <game/game.hpp>
 
@@ -101,6 +102,9 @@ BoardState::BoardState(Game *game, int n, int m, int cpu_level) : BoardState(gam
             }
         }
     }
+
+    // configure CPU drawing options
+    mCPUDrawInfo.Speed = 0.1f;
 }
 int BoardState::init()
 {
@@ -206,6 +210,7 @@ int BoardState::init()
 int BoardState::processEvent(SDL_Event &event)
 {
     int error = 0;
+
     if (event.type == SDL_WINDOWEVENT)
     {
         if (event.window.event == SDL_WINDOWEVENT_RESIZED)
@@ -213,157 +218,239 @@ int BoardState::processEvent(SDL_Event &event)
             mRecalculatePositions(glm::vec2(event.window.data1, event.window.data2));
         }
     }
-    else if (event.type == SDL_MOUSEMOTION)
+    else if (StateData.CurrentPlayer == 0)
     {
-        auto x = event.motion.x;
-        auto y = event.motion.y;
-
-        auto xrel = event.motion.xrel;
-        auto yrel = event.motion.yrel;
-
-        for (int i = 0; i < N; i++)
+        if (event.type == SDL_MOUSEMOTION)
         {
-            for (int j = 0; j < M; j++)
+            auto x = event.motion.x;
+            auto y = event.motion.y;
+
+            auto xrel = event.motion.xrel;
+            auto yrel = event.motion.yrel;
+
+            for (int i = 0; i < N; i++)
             {
-                if (glm::distance(glm::vec2(x, y), Dots[i][j].Position) < Dots[i][j].Size)
+                for (int j = 0; j < M; j++)
                 {
-                    Dots[i][j].Hovered = true;
-                }
-                else
-                {
-                    Dots[i][j].Hovered = false;
-                }
-            }
-        }
-        if (NewLine && PickedDot.second && !ConnectDot.second)
-        {
-            NewLine->EndPosition = glm::vec2(event.motion.x, event.motion.y);
-            NewLine->windowResize(mGame->getWindowSize());
-        }
-    }
-    else if (event.type == SDL_MOUSEBUTTONDOWN)
-    {
-        // mouse pressed -> check for the hovered dot and draw a line from that dot up until the mouse position
-        utils::log::debug("mouse down");
-        mGetHoveredDot();
-        if (PickedDot.second != nullptr)
-        {
-            NewLine = new eng::draw::Line();
-
-            utils::log::debug("adding new line");
-            utils::log::debug("setting line buffers");
-            NewLine->setupBuffers();
-
-            if (error)
-            {
-                utils::log::debug("unable to setup line buffers");
-                return -1;
-            }
-            utils::log::debug("setting properties");
-
-            NewLine->Height = 1.5f;
-            NewLine->Color = PlayerColors[StateData.CurrentPlayer];
-            NewLine->ConnectedDots.first = PickedDot.second;
-            NewLine->StartPosition = NewLine->EndPosition = PickedDot.second->Position;
-        }
-    }
-    else if (event.type == SDL_MOUSEBUTTONUP)
-    {
-        // mouse released -> check for hovered dot and connect if possible the picked and connect dots
-        utils::log::debug("mouse up");
-        mGetHoveredDot();
-        if (ConnectDot.second != nullptr && PickedDot.second != nullptr)
-        {
-            utils::log::debug("picked + connect valid - setting positions");
-            if (PickedDot.second->Position == ConnectDot.second->Position)
-            {
-                // same dot -> do nothing, just release
-                PickedDot.second = nullptr;
-                ConnectDot.second = nullptr;
-
-                utils::log::debug("same dot - ignore");
-                delete NewLine;
-                NewLine = nullptr;
-            }
-            else
-            {
-                // check if able to connect
-                if ((PickedDot.second->Position.x == ConnectDot.second->Position.x && PickedDot.second->Position.y != ConnectDot.second->Position.y &&
-                     glm::abs(glm::abs(PickedDot.second->Position.y - ConnectDot.second->Position.y) - DotsDistance.y) < 1.0f) ||
-                    ((PickedDot.second->Position.y == ConnectDot.second->Position.y && PickedDot.second->Position.x != ConnectDot.second->Position.x &&
-                      glm::abs(glm::abs(PickedDot.second->Position.x - ConnectDot.second->Position.x) - DotsDistance.x) < 1.0f)))
-                {
-                    // utils::log::debug("dots distance: %f", DotsDistance.y);
-                    // utils::log::debug("dots real distance: %f", glm::abs(PickedDot.second->Position.y - ConnectDot.second->Position.y));
-                    // utils::log::debug("normal line - adding fully to the collection");
-
-                    NewLine->EndPosition = ConnectDot.second->Position;
-                    NewLine->ConnectedDots.second = ConnectDot.second;
-                    NewLine->windowResize(mGame->getWindowSize());
-
-                    // change color to black/gray after drawing permanently
-                    NewLine->Color = glm::vec3(52, 52, 52);
-                    Lines.push_back(NewLine);
-                    NewLine = nullptr;
-
-                    utils::log::debug("picked = %d, connect = %d", PickedDot.first, ConnectDot.first);
-
-                    StateData.pickLine({PickedDot.first, ConnectDot.first});
-                    bool any_new = StateData.checkForNewBoxes(N, M);
-                    if (!any_new)
+                    if (glm::distance(glm::vec2(x, y), Dots[i][j].Position) < Dots[i][j].Size)
                     {
-                        StateData.CurrentPlayer = !StateData.CurrentPlayer;
-                        mCPUDrawLine();
+                        Dots[i][j].Hovered = true;
                     }
                     else
                     {
-                        // assign color to the new boxes
-                        for (int i = 0; i < N - 1; i++)
+                        Dots[i][j].Hovered = false;
+                    }
+                }
+            }
+            if (NewLine && PickedDot.second && !ConnectDot.second)
+            {
+                NewLine->EndPosition = glm::vec2(event.motion.x, event.motion.y);
+                NewLine->windowResize(mGame->getWindowSize());
+            }
+        }
+        else if (event.type == SDL_MOUSEBUTTONDOWN)
+        {
+            // mouse pressed -> check for the hovered dot and draw a line from that dot up until the mouse position
+            utils::log::debug("mouse down");
+            mGetHoveredDot();
+            if (PickedDot.second != nullptr)
+            {
+                NewLine = new eng::draw::Line();
+
+                utils::log::debug("adding new line");
+                utils::log::debug("setting line buffers");
+                NewLine->setupBuffers();
+
+                if (error)
+                {
+                    utils::log::debug("unable to setup line buffers");
+                    return -1;
+                }
+                utils::log::debug("setting properties");
+
+                NewLine->Height = 1.5f;
+                NewLine->Color = PlayerColors[StateData.CurrentPlayer];
+                NewLine->ConnectedDots.first = PickedDot.second;
+                NewLine->StartPosition = NewLine->EndPosition = PickedDot.second->Position;
+            }
+        }
+        else if (event.type == SDL_MOUSEBUTTONUP)
+        {
+            // mouse released -> check for hovered dot and connect if possible the picked and connect dots
+            utils::log::debug("mouse up");
+            mGetHoveredDot();
+            if (ConnectDot.second != nullptr && PickedDot.second != nullptr)
+            {
+                utils::log::debug("picked + connect valid - setting positions");
+                if (PickedDot.second->Position == ConnectDot.second->Position)
+                {
+                    // same dot -> do nothing, just release
+                    PickedDot.second = nullptr;
+                    ConnectDot.second = nullptr;
+
+                    utils::log::debug("same dot - ignore");
+                    delete NewLine;
+                    NewLine = nullptr;
+                }
+                else
+                {
+                    // check if able to connect
+                    if ((PickedDot.second->Position.x == ConnectDot.second->Position.x && PickedDot.second->Position.y != ConnectDot.second->Position.y &&
+                         glm::abs(glm::abs(PickedDot.second->Position.y - ConnectDot.second->Position.y) - DotsDistance.y) < 1.0f) ||
+                        ((PickedDot.second->Position.y == ConnectDot.second->Position.y && PickedDot.second->Position.x != ConnectDot.second->Position.x &&
+                          glm::abs(glm::abs(PickedDot.second->Position.x - ConnectDot.second->Position.x) - DotsDistance.x) < 1.0f)))
+                    {
+                        // utils::log::debug("dots distance: %f", DotsDistance.y);
+                        // utils::log::debug("dots real distance: %f", glm::abs(PickedDot.second->Position.y - ConnectDot.second->Position.y));
+                        // utils::log::debug("normal line - adding fully to the collection");
+
+                        NewLine->EndPosition = ConnectDot.second->Position;
+                        NewLine->ConnectedDots.second = ConnectDot.second;
+                        NewLine->windowResize(mGame->getWindowSize());
+
+                        // change color to black/gray after drawing permanently
+                        NewLine->Color = glm::vec3(52, 52, 52);
+                        Lines.push_back(NewLine);
+                        NewLine = nullptr;
+
+                        utils::log::debug("picked = %d, connect = %d", PickedDot.first, ConnectDot.first);
+
+                        StateData.pickLine({PickedDot.first, ConnectDot.first});
+                        bool any_new = StateData.checkForNewBoxes(N, M);
+                        if (!any_new)
                         {
-                            for (int j = 0; j < M - 1; j++)
+                            StateData.CurrentPlayer = true;
+                            // mCPUDrawLine();
+                        }
+                        else
+                        {
+                            // assign color to the new boxes
+                            for (int i = 0; i < N - 1; i++)
                             {
-                                if (StateData.BoxesDraw[i][j] && !Boxes[i][j].Draw)
+                                for (int j = 0; j < M - 1; j++)
                                 {
-                                    Boxes[i][j].Draw = true;
-                                    Boxes[i][j].Color = PlayerColors[StateData.CurrentPlayer];
+                                    if (StateData.BoxesDraw[i][j] && !Boxes[i][j].Draw)
+                                    {
+                                        Boxes[i][j].Draw = true;
+                                        Boxes[i][j].Color = PlayerColors[StateData.CurrentPlayer];
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                else
-                {
-                    utils::log::debug("unable to connect cross");
-                    delete NewLine;
-                    NewLine = nullptr;
-                }
+                    else
+                    {
+                        utils::log::debug("unable to connect cross");
+                        delete NewLine;
+                        NewLine = nullptr;
+                    }
 
+                    PickedDot.second = nullptr;
+                    ConnectDot.second = nullptr;
+                    PickedDot.first = -1;
+                    ConnectDot.first = -1;
+                }
+            }
+            else if (PickedDot.second != nullptr)
+            {
                 PickedDot.second = nullptr;
                 ConnectDot.second = nullptr;
-                PickedDot.first = -1;
-                ConnectDot.first = -1;
+                delete NewLine;
+                NewLine = nullptr;
+            }
+            else if (ConnectDot.second != nullptr)
+            {
+                PickedDot.second = nullptr;
+                ConnectDot.second = nullptr;
+                delete NewLine;
+                NewLine = nullptr;
             }
         }
-        else if (PickedDot.second != nullptr)
-        {
-            PickedDot.second = nullptr;
-            ConnectDot.second = nullptr;
-            delete NewLine;
-            NewLine = nullptr;
-        }
-        else if (ConnectDot.second != nullptr)
-        {
-            PickedDot.second = nullptr;
-            ConnectDot.second = nullptr;
-            delete NewLine;
-            NewLine = nullptr;
-        }
     }
+
     return error;
 }
 int BoardState::processInput()
 {
     int error = 0;
+
+    const float speed = 200 * mTimer.getElapsedSeconds();
+
+    if (StateData.CurrentPlayer == 1)
+    {
+        for (auto &dots_row : Dots)
+        {
+            for (auto &dot : dots_row)
+            {
+                dot.Hovered = false;
+            }
+        }
+        if (!mCPUDrawInfo.Drawing)
+        {
+            // start drawing
+            mCPUDrawLine();
+            return 0;
+        }
+    }
+
+    if (mCPUDrawInfo.Drawing)
+    {
+        if (glm::distance(NewLine->EndPosition, NewLine->ConnectedDots.second->Position) < 1.0f)
+        {
+            // set to final position
+            NewLine->updatePositions();
+            NewLine->windowResize(mGame->getWindowSize());
+            NewLine->Color = glm::vec3(52, 52, 52);
+
+            // add to lines
+            Lines.push_back(NewLine);
+            NewLine = nullptr;
+
+            // configure next step
+            mCPUDrawInfo.Drawing = false;
+
+            bool any_new = StateData.checkForNewBoxes(N, M);
+            if (!any_new)
+            {
+                StateData.CurrentPlayer = false;
+                mCPUDrawInfo.KeepDrawing = false;
+            }
+            else
+            {
+                mCPUDrawInfo.KeepDrawing = true;
+            }
+
+            // also check for new boxes to draw after the line has been added
+            for (int i = 0; i < N - 1; i++)
+            {
+                for (int j = 0; j < M - 1; j++)
+                {
+                    if (StateData.BoxesDraw[i][j] && !Boxes[i][j].Draw)
+                    {
+                        Boxes[i][j].Draw = true;
+                        Boxes[i][j].Color = PlayerColors[StateData.CurrentPlayer];
+                    }
+                }
+            }
+        }
+        else
+        {
+            glm::vec2 plus_vec = {0.f, 0.f};
+
+            if (mCPUDrawInfo.Axis == CPUDrawingAxis::Y)
+            {
+                plus_vec += speed * glm::vec2(1.0f, 0.0f);
+            }
+            else
+            {
+                plus_vec += speed * glm::vec2(0.0f, 1.0f);
+            }
+
+            NewLine->EndPosition += plus_vec;
+            NewLine->windowResize(mGame->getWindowSize());
+        }
+    }
+
     return error;
 }
 int BoardState::draw()
@@ -548,6 +635,9 @@ int BoardState::mCPUDrawLine()
 {
     int error = 0;
 
+    // disable user interaction until the CPU draws the line - "animation"
+    mCPUDrawInfo.Drawing = true;
+
     NewLine = new eng::draw::Line();
 
     utils::log::debug("adding new line");
@@ -562,7 +652,7 @@ int BoardState::mCPUDrawLine()
     utils::log::debug("setting properties");
 
     NewLine->Height = 1.5f;
-    NewLine->Color = glm::vec3(52, 52, 52);
+    NewLine->Color = PlayerColors[1];
 
     // use minimax algorithm to draw best possible line
     auto line = mMiniMax(StateData, mCPULevel, -100, 100).first;
@@ -587,37 +677,23 @@ int BoardState::mCPUDrawLine()
     NewLine->ConnectedDots.first = &Dots[mp_row][mp_col];
     NewLine->ConnectedDots.second = &Dots[mc_row][mc_col];
 
+    // update start position
     NewLine->updatePositions();
 
-    NewLine->windowResize(mGame->getWindowSize());
-
-    // add to lines
-    Lines.push_back(NewLine);
-    NewLine = nullptr;
-
-    utils::log::debug("picked = %d, connect = %d", line.first, line.second);
-
-    bool any_new = StateData.checkForNewBoxes(N, M);
-    if (!any_new)
+    if (glm::distance(NewLine->StartPosition.x, NewLine->EndPosition.x) < 0.001)
     {
-        StateData.CurrentPlayer = !StateData.CurrentPlayer;
+        mCPUDrawInfo.Axis = CPUDrawingAxis::X;
     }
     else
     {
-        // keep drawing until no new box has been found
-        for (int i = 0; i < N - 1; i++)
-        {
-            for (int j = 0; j < M - 1; j++)
-            {
-                if (StateData.BoxesDraw[i][j] && !Boxes[i][j].Draw)
-                {
-                    Boxes[i][j].Draw = true;
-                    Boxes[i][j].Color = PlayerColors[StateData.CurrentPlayer];
-                }
-            }
-        }
-        mCPUDrawLine();
+        mCPUDrawInfo.Axis = CPUDrawingAxis::Y;
     }
+
+    // set new line length to 0 for the start of drawing - over time get closer to the connect dot
+    NewLine->EndPosition = NewLine->ConnectedDots.first->Position;
+    NewLine->windowResize(mGame->getWindowSize());
+
+    utils::log::debug("picked = %d, connect = %d", line.first, line.second);
 
     return error;
 }

@@ -35,6 +35,7 @@ add_executable(
     "src/game/state/tmp_state.cpp"
 
     # engine
+    "src/engine/timer.cpp"
 
     # drawables
     "src/engine/drawable/box.cpp"
