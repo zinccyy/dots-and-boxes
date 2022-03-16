@@ -159,7 +159,7 @@ int PlayerVsCPUState::processInput()
 
         if (mBoardState->StateData.Scores[0] > mBoardState->StateData.Scores[1])
         {
-            win_info = "Player 1 won!";
+            win_info = "You won!";
         }
         else if (mBoardState->StateData.Scores[0] < mBoardState->StateData.Scores[1])
         {
