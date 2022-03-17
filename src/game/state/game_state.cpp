@@ -130,6 +130,7 @@ int GameState::init()
         }
     }
 
+    glViewport(0, 0, (int)mGame->getWindowSize().x, (int)mGame->getWindowSize().y);
     mRecalculatePositions(mGame->getWindowSize());
 
     // enable for transparency
@@ -147,10 +148,10 @@ int GameState::processEvent(SDL_Event &event)
 
     if (event.type == SDL_WINDOWEVENT)
     {
-        if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+        if (event.window.event == SDL_WINDOWEVENT_RESIZED || event.window.event == SDL_WINDOWEVENT_MAXIMIZED || event.window.event == SDL_WINDOWEVENT_MINIMIZED)
         {
-            mRecalculatePositions(glm::vec2(event.window.data1, event.window.data2));
             glViewport(0, 0, event.window.data1, event.window.data2);
+            mRecalculatePositions(glm::vec2(event.window.data1, event.window.data2));
         }
     }
 
@@ -286,22 +287,16 @@ int GameState::draw()
 }
 void GameState::mRecalculatePositions(const glm::vec2 &win_size)
 {
-    // recalculate positions for text based on dots Y positions
-    for (auto &text : mPlayerNameText)
-    {
-        text.StartPosition.x = win_size.x / 8;
-    }
+    mPlayerNameText[0].StartPosition.x = win_size.x / 8;
+    mPlayerScoreText[0].StartPosition.x = win_size.x / 8 + win_size.x / 10;
 
-    for (auto &text : mPlayerScoreText)
-    {
-        text.StartPosition.x = win_size.x / 8 + 100;
-    }
+    mPlayerNameText[1].StartPosition.x = win_size.x - (win_size.x / 8 + win_size.x / 10);
+    mPlayerScoreText[1].StartPosition.x = win_size.x - win_size.x / 8;
 
-    mPlayerScoreText[0].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 200;
-    mPlayerScoreText[1].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 100;
-
-    mPlayerNameText[0].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 200;
-    mPlayerNameText[1].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 100;
+    mPlayerScoreText[0].StartPosition.y = win_size.y / 10;
+    mPlayerScoreText[1].StartPosition.y = win_size.y / 10;
+    mPlayerNameText[0].StartPosition.y = win_size.y / 10;
+    mPlayerNameText[1].StartPosition.y = win_size.y / 10;
 
     for (auto &text : mPlayerScoreText)
     {
