@@ -218,7 +218,7 @@ int BoardState::processEvent(SDL_Event &event)
             mRecalculatePositions(glm::vec2(event.window.data1, event.window.data2));
         }
     }
-    else if (StateData.CurrentPlayer == 0)
+    else if ((mCPULevel != 0 && StateData.CurrentPlayer == 0) || (mCPULevel == 0))
     {
         if (event.type == SDL_MOUSEMOTION)
         {
@@ -319,7 +319,7 @@ int BoardState::processEvent(SDL_Event &event)
                         bool any_new = StateData.checkForNewBoxes(N, M);
                         if (!any_new)
                         {
-                            StateData.CurrentPlayer = 1;
+                            StateData.CurrentPlayer = !StateData.CurrentPlayer;
                         }
                         else
                         {
@@ -373,7 +373,7 @@ int BoardState::processInput()
 {
     int error = 0;
 
-    if (!StateData.GameOver)
+    if (!StateData.GameOver && mCPULevel != 0)
     {
         const float speed = 200 * mTimer.getElapsedSeconds();
 
