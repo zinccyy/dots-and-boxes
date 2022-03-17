@@ -396,7 +396,7 @@ int BoardState::processInput()
 
         if (mCPUDrawInfo.Drawing)
         {
-            if (glm::distance(NewLine->EndPosition, NewLine->ConnectedDots.second->Position) < 1.0f)
+            if (glm::distance(NewLine->EndPosition, NewLine->ConnectedDots.second->Position) < 3.0f)
             {
                 // set to final position
                 NewLine->updatePositions();

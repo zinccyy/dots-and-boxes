@@ -26,7 +26,8 @@ namespace state
 {
 GameState::GameState(Game *game)
     : State(game), mBoardState(nullptr),
-      mRestartMenuReady(false), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 700)), eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 100))}
+      mRestartMenuReady(false), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(0, 0)), eng::draw::Text(mCharsMap, glm::vec2(0, 0))}, mPlayerNameText{eng::draw::Text(mCharsMap, glm::vec2(0, 0)),
+                                                                                                                                                            eng::draw::Text(mCharsMap, glm::vec2(0, 0))}
 {
 }
 GameState::GameState(Game *game, int n, int m, GameLevel level) : GameState(game)
@@ -88,13 +89,15 @@ int GameState::init()
     utils::log::debug("loaded needed character bitmaps");
 
     // setup initial text
-    mPlayerScoreText[0].Color = mBoardState->PlayerColors[0];
-    mPlayerScoreText[0].setText("0");
-    mPlayerScoreText[0].Scale = 0.5;
+    for (int i = 0; i < mPlayerScoreText.size(); i++)
+    {
+        mPlayerScoreText[i].Color = mBoardState->PlayerColors[i];
+        mPlayerScoreText[i].setText("0");
+        mPlayerScoreText[i].Scale = 0.5;
 
-    mPlayerScoreText[1].Color = mBoardState->PlayerColors[1];
-    mPlayerScoreText[1].setText("0");
-    mPlayerScoreText[1].Scale = 0.5;
+        mPlayerNameText[i].Color = glm::vec3(53, 53, 53);
+        mPlayerNameText[i].Scale = 0.5;
+    }
 
     for (auto &text : mPlayerScoreText)
     {
@@ -102,6 +105,27 @@ int GameState::init()
         if (error)
         {
             utils::log::error("unable to setup buffers player score text");
+            return -1;
+        }
+    }
+
+    if (mLevel == GameLevel::None)
+    {
+        mPlayerNameText[0].setText("Player 1: ");
+        mPlayerNameText[1].setText("Player 2: ");
+    }
+    else
+    {
+        mPlayerNameText[0].setText("You: ");
+        mPlayerNameText[1].setText("CPU: ");
+    }
+
+    for (auto &text : mPlayerNameText)
+    {
+        error = text.setupBuffers();
+        if (error)
+        {
+            utils::log::error("unable to setup buffers player name text");
             return -1;
         }
     }
@@ -243,6 +267,11 @@ int GameState::draw()
         text.draw(mFontCharacterShaderProgram);
     }
 
+    for (auto &text : mPlayerNameText)
+    {
+        text.draw(mFontCharacterShaderProgram);
+    }
+
     // board
     mBoardState->draw();
 
@@ -257,7 +286,29 @@ int GameState::draw()
 }
 void GameState::mRecalculatePositions(const glm::vec2 &win_size)
 {
+    // recalculate positions for text based on dots Y positions
+    for (auto &text : mPlayerNameText)
+    {
+        text.StartPosition.x = win_size.x / 8;
+    }
+
     for (auto &text : mPlayerScoreText)
+    {
+        text.StartPosition.x = win_size.x / 8 + 100;
+    }
+
+    mPlayerScoreText[0].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 200;
+    mPlayerScoreText[1].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 100;
+
+    mPlayerNameText[0].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 200;
+    mPlayerNameText[1].StartPosition.y = mBoardState->Dots[mBoardState->N - 1][0].Position.y + 100;
+
+    for (auto &text : mPlayerScoreText)
+    {
+        text.windowResize(win_size);
+    }
+
+    for (auto &text : mPlayerNameText)
     {
         text.windowResize(win_size);
     }

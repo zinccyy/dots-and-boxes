@@ -54,6 +54,7 @@ class GameState : public State
 
     // text to use
     std::array<eng::draw::Text, 2> mPlayerScoreText;
+    std::array<eng::draw::Text, 2> mPlayerNameText;
 
     // CPU level
     GameLevel mLevel;
