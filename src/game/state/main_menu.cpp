@@ -68,10 +68,10 @@ int MainMenu::processInput()
     ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor(233, 84, 32, 255));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor(233 / 2, 84 / 2, 32 / 2, 255));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor(16, 16, 16, 255));
-    if (mDrawButtonCentered("About"))
-    {
-        utils::log::debug("Show game about");
-    }
+    // if (mDrawButtonCentered("About"))
+    // {
+    //     utils::log::debug("Show game about");
+    // }
     if (mDrawButtonCentered("vs Player"))
     {
         mShowVsPlayerSizePicker = true;
@@ -80,9 +80,9 @@ int MainMenu::processInput()
     {
         mShowVsCPUSizePicker = true;
     }
-    if (mDrawButtonCentered("Settings"))
-    {
-    }
+    // if (mDrawButtonCentered("Settings"))
+    // {
+    // }
     ImGui::PopStyleColor(3);
     ImGui::End();
 
