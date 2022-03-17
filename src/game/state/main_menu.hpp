@@ -1,7 +1,7 @@
 #pragma once
 
 #include <game/state.hpp>
-#include <game/state/pvc_state.hpp>
+#include <game/state/game_state.hpp>
 
 #include <glm/glm.hpp>
 

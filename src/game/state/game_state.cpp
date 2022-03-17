@@ -1,6 +1,6 @@
 #include <SDL_events.h>
 #include <SDL_video.h>
-#include <game/state/pvc_state.hpp>
+#include <game/state/game_state.hpp>
 
 #include <sstream>
 #include <utility>
@@ -24,17 +24,17 @@ namespace gm
 {
 namespace state
 {
-PlayerVsCPUState::PlayerVsCPUState(Game *game)
+GameState::GameState(Game *game)
     : State(game), mBoardState(nullptr),
       mRestartMenuReady(false), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 700)), eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 100))}
 {
 }
-PlayerVsCPUState::PlayerVsCPUState(Game *game, int n, int m, GameLevel level) : PlayerVsCPUState(game)
+GameState::GameState(Game *game, int n, int m, GameLevel level) : GameState(game)
 {
     mLevel = level;
     mBoardState = new BoardState(game, n + 1, m + 1, (int)mLevel + 1);
 }
-int PlayerVsCPUState::init()
+int GameState::init()
 {
     int error = 0;
 
@@ -117,7 +117,7 @@ int PlayerVsCPUState::init()
 
     return error;
 }
-int PlayerVsCPUState::processEvent(SDL_Event &event)
+int GameState::processEvent(SDL_Event &event)
 {
     int error = 0;
 
@@ -147,7 +147,7 @@ int PlayerVsCPUState::processEvent(SDL_Event &event)
 
     return error;
 }
-int PlayerVsCPUState::processInput()
+int GameState::processInput()
 {
     int error = 0;
 
@@ -158,11 +158,25 @@ int PlayerVsCPUState::processInput()
 
         if (mBoardState->StateData.Scores[0] > mBoardState->StateData.Scores[1])
         {
-            win_info = "You won!";
+            if (mLevel == GameLevel::None)
+            {
+                win_info = "Player 1 won!";
+            }
+            else
+            {
+                win_info = "You won!";
+            }
         }
         else if (mBoardState->StateData.Scores[0] < mBoardState->StateData.Scores[1])
         {
-            win_info = "CPU won!";
+            if (mLevel == GameLevel::None)
+            {
+                win_info = "Player 2 won!";
+            }
+            else
+            {
+                win_info = "CPU won!";
+            }
         }
         else
         {
@@ -180,7 +194,7 @@ int PlayerVsCPUState::processInput()
         if (ImGui::Button("Restart", ImVec2(70, 20)))
         {
             utils::log::debug("restart the game: %dx%d", (int)mBoardState->N - 1, (int)mBoardState->M - 1);
-            auto new_state = new PlayerVsCPUState(mGame, (int)mBoardState->N - 1, (int)mBoardState->M - 1, mLevel);
+            auto new_state = new GameState(mGame, (int)mBoardState->N - 1, (int)mBoardState->M - 1, mLevel);
 
             error = new_state->init();
             if (error)
@@ -208,7 +222,7 @@ int PlayerVsCPUState::processInput()
 
     return error;
 }
-int PlayerVsCPUState::draw()
+int GameState::draw()
 {
     int error = 0;
 
@@ -241,14 +255,14 @@ int PlayerVsCPUState::draw()
 
     return error;
 }
-void PlayerVsCPUState::mRecalculatePositions(const glm::vec2 &win_size)
+void GameState::mRecalculatePositions(const glm::vec2 &win_size)
 {
     for (auto &text : mPlayerScoreText)
     {
         text.windowResize(win_size);
     }
 }
-PlayerVsCPUState::~PlayerVsCPUState()
+GameState::~GameState()
 {
     // shutdown freetype
     delete mBoardState;

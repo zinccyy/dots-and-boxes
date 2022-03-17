@@ -21,22 +21,23 @@ namespace state
 {
 enum class GameLevel
 {
+    None = -1,
     Easy = 0,
     Medium = 1,
     Hard = 2,
 };
-class PlayerVsCPUState : public State
+class GameState : public State
 {
   public:
-    PlayerVsCPUState(Game *game);
-    PlayerVsCPUState(Game *game, int n, int m, GameLevel level);
+    GameState(Game *game);
+    GameState(Game *game, int n, int m, GameLevel level);
 
     int init() override;
     int processEvent(SDL_Event &event) override;
     int processInput() override;
     int draw() override;
 
-    ~PlayerVsCPUState();
+    ~GameState();
 
   private:
     void mRecalculatePositions(const glm::vec2 &win_size);

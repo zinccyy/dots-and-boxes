@@ -14,7 +14,6 @@
 
 // states
 #include <game/state/main_menu.hpp>
-#include <game/state/pvp_state.hpp>
 
 namespace gm
 {

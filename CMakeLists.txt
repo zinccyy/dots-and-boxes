@@ -29,10 +29,8 @@ add_executable(
 
     # game/state
     "src/game/state/main_menu.cpp"
-    "src/game/state/pvp_state.cpp"
-    "src/game/state/pvc_state.cpp"
+    "src/game/state/game_state.cpp"
     "src/game/state/board_state.cpp"
-    "src/game/state/tmp_state.cpp"
 
     # engine
     "src/engine/timer.cpp"
