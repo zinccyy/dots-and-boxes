@@ -25,8 +25,8 @@ namespace gm
 namespace state
 {
 PlayerVsCPUState::PlayerVsCPUState(Game *game)
-    : State(game),
-      mBoardState(nullptr), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 700)), eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 100))}
+    : State(game), mBoardState(nullptr),
+      mRestartMenuReady(false), mPlayerScoreText{eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 700)), eng::draw::Text(mCharsMap, glm::vec2(mGame->getWindowSize().x / 2, 100))}
 {
 }
 PlayerVsCPUState::PlayerVsCPUState(Game *game, int n, int m, GameLevel level) : PlayerVsCPUState(game)
@@ -121,8 +121,6 @@ int PlayerVsCPUState::processEvent(SDL_Event &event)
 {
     int error = 0;
 
-    // ImGui_ImplSDL2_ProcessEvent(&event);
-
     if (event.type == SDL_WINDOWEVENT)
     {
         if (event.window.event == SDL_WINDOWEVENT_RESIZED)
@@ -155,6 +153,7 @@ int PlayerVsCPUState::processInput()
 
     if (mBoardState->StateData.GameOver)
     {
+        mRestartMenuReady = true;
         std::string win_info;
 
         if (mBoardState->StateData.Scores[0] > mBoardState->StateData.Scores[1])
@@ -233,7 +232,7 @@ int PlayerVsCPUState::draw()
     // board
     mBoardState->draw();
 
-    if (mBoardState->StateData.GameOver)
+    if (mRestartMenuReady)
     {
         // menu for restart or main menu exit
         ImGui::Render();

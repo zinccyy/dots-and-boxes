@@ -59,6 +59,9 @@ class PlayerVsCPUState : public State
 
     // board sub state - gathering all drawables used for the board in one place
     BoardState *mBoardState;
+
+    // is the restart menu ready - prevent flickering and drawing main menu imgui instead of restart/main menu window
+    bool mRestartMenuReady;
 };
 } // namespace state
 } // namespace gm

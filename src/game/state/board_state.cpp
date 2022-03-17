@@ -414,11 +414,11 @@ int BoardState::processInput()
                 if (!any_new)
                 {
                     StateData.CurrentPlayer = false;
-                    mCPUDrawInfo.KeepDrawing = false;
+                    // mCPUDrawInfo.KeepDrawing = false;
                 }
                 else
                 {
-                    mCPUDrawInfo.KeepDrawing = true;
+                    // mCPUDrawInfo.KeepDrawing = true;
                 }
 
                 // also check for new boxes to draw after the line has been added

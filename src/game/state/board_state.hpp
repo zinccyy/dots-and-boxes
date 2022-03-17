@@ -34,9 +34,6 @@ struct CPUDrawingInfo
 
     // is CPU drawing a line currently or not
     bool Drawing;
-
-    // keep drawing because CPU still has moves left
-    bool KeepDrawing;
 };
 using LineIndices = std::pair<uint8_t, uint8_t>;
 // board scoring state, adjency matrix etc.
