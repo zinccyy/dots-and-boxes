@@ -319,8 +319,7 @@ int BoardState::processEvent(SDL_Event &event)
                         bool any_new = StateData.checkForNewBoxes(N, M);
                         if (!any_new)
                         {
-                            StateData.CurrentPlayer = true;
-                            // mCPUDrawLine();
+                            StateData.CurrentPlayer = 1;
                         }
                         else
                         {
@@ -374,80 +373,83 @@ int BoardState::processInput()
 {
     int error = 0;
 
-    const float speed = 200 * mTimer.getElapsedSeconds();
-
-    if (StateData.CurrentPlayer == 1)
+    if (!StateData.GameOver)
     {
-        for (auto &dots_row : Dots)
+        const float speed = 200 * mTimer.getElapsedSeconds();
+
+        if (StateData.CurrentPlayer == 1)
         {
-            for (auto &dot : dots_row)
+            for (auto &dots_row : Dots)
             {
-                dot.Hovered = false;
-            }
-        }
-        if (!mCPUDrawInfo.Drawing)
-        {
-            // start drawing
-            mCPUDrawLine();
-            return 0;
-        }
-    }
-
-    if (mCPUDrawInfo.Drawing)
-    {
-        if (glm::distance(NewLine->EndPosition, NewLine->ConnectedDots.second->Position) < 1.0f)
-        {
-            // set to final position
-            NewLine->updatePositions();
-            NewLine->windowResize(mGame->getWindowSize());
-            NewLine->Color = glm::vec3(52, 52, 52);
-
-            // add to lines
-            Lines.push_back(NewLine);
-            NewLine = nullptr;
-
-            // configure next step
-            mCPUDrawInfo.Drawing = false;
-
-            bool any_new = StateData.checkForNewBoxes(N, M);
-            if (!any_new)
-            {
-                StateData.CurrentPlayer = false;
-                mCPUDrawInfo.KeepDrawing = false;
-            }
-            else
-            {
-                mCPUDrawInfo.KeepDrawing = true;
-            }
-
-            // also check for new boxes to draw after the line has been added
-            for (int i = 0; i < N - 1; i++)
-            {
-                for (int j = 0; j < M - 1; j++)
+                for (auto &dot : dots_row)
                 {
-                    if (StateData.BoxesDraw[i][j] && !Boxes[i][j].Draw)
+                    dot.Hovered = false;
+                }
+            }
+            if (!mCPUDrawInfo.Drawing)
+            {
+                // start drawing
+                mCPUDrawLine();
+                return 0;
+            }
+        }
+
+        if (mCPUDrawInfo.Drawing)
+        {
+            if (glm::distance(NewLine->EndPosition, NewLine->ConnectedDots.second->Position) < 1.0f)
+            {
+                // set to final position
+                NewLine->updatePositions();
+                NewLine->windowResize(mGame->getWindowSize());
+                NewLine->Color = glm::vec3(52, 52, 52);
+
+                // add to lines
+                Lines.push_back(NewLine);
+                NewLine = nullptr;
+
+                // configure next step
+                mCPUDrawInfo.Drawing = false;
+
+                bool any_new = StateData.checkForNewBoxes(N, M);
+                if (!any_new)
+                {
+                    StateData.CurrentPlayer = false;
+                    mCPUDrawInfo.KeepDrawing = false;
+                }
+                else
+                {
+                    mCPUDrawInfo.KeepDrawing = true;
+                }
+
+                // also check for new boxes to draw after the line has been added
+                for (int i = 0; i < N - 1; i++)
+                {
+                    for (int j = 0; j < M - 1; j++)
                     {
-                        Boxes[i][j].Draw = true;
-                        Boxes[i][j].Color = PlayerColors[StateData.CurrentPlayer];
+                        if (StateData.BoxesDraw[i][j] && !Boxes[i][j].Draw)
+                        {
+                            Boxes[i][j].Draw = true;
+                            Boxes[i][j].Color = PlayerColors[StateData.CurrentPlayer];
+                        }
                     }
                 }
             }
-        }
-        else
-        {
-            glm::vec2 plus_vec = {0.f, 0.f};
-
-            if (mCPUDrawInfo.Axis == CPUDrawingAxis::Y)
-            {
-                plus_vec += speed * glm::vec2(1.0f, 0.0f);
-            }
             else
             {
-                plus_vec += speed * glm::vec2(0.0f, 1.0f);
-            }
+                glm::vec2 plus_vec = {0.f, 0.f};
 
-            NewLine->EndPosition += plus_vec;
-            NewLine->windowResize(mGame->getWindowSize());
+                if (mCPUDrawInfo.Axis == CPUDrawingAxis::Y)
+                {
+                    plus_vec += speed * glm::vec2(1.0f, 0.0f);
+                }
+                else
+                {
+                    plus_vec += speed * glm::vec2(0.0f, 1.0f);
+                }
+
+                NewLine->EndPosition += plus_vec;
+                NewLine->windowResize(mGame->getWindowSize());
+            }
         }
     }
 
