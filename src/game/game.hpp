@@ -31,6 +31,12 @@ class Game
     // init GLEW + setup opengl
     int initOpenGLData();
 
+    // get game running state
+    bool getRunningState();
+
+    // single loop iteration
+    void loopIter();
+
     // run the game
     int run();
 

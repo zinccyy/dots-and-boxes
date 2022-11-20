@@ -2,6 +2,7 @@
 
 #include <engine/drawable.hpp>
 #include <engine/drawable/character.hpp>
+#include <string>
 
 // freetype
 #include <ft2build.h>

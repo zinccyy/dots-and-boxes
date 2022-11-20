@@ -18,11 +18,28 @@ int ShaderProgram::loadShadersFromSource(const char *vShaderPath, const char *fS
         return -1;
     }
 
+#ifdef __EMSCRIPTEN__
+    // vert shader
+    auto ssearch = std::string("#version 330 core");
+    auto ptr = vert_source.value().find(ssearch);
+    if (ptr != std::string::npos)
+        vert_source.value().replace(ptr, ssearch.length(), "#version 300 es\nprecision mediump float;\n");
+
+    // frag shader
+    ssearch = std::string("#version 330 core");
+    ptr = frag_source.value().find(ssearch);
+    if (ptr != std::string::npos)
+        frag_source.value().replace(ptr, ssearch.length(), "#version 300 es\nprecision mediump float;\n");
+#endif
+
     mVertShader = glCreateShader(GL_VERTEX_SHADER);
     mFragShader = glCreateShader(GL_FRAGMENT_SHADER);
 
     auto vs_ptr = vert_source->c_str();
     auto fs_ptr = frag_source->c_str();
+
+    utils::log::debug("SOURCE(VERT_SHADER):\n%s\n", vs_ptr);
+    utils::log::debug("SOURCE(FRAG_SHADER):\n%s\n", fs_ptr);
 
     glShaderSource(mVertShader, 1, &vs_ptr, nullptr);
     glShaderSource(mFragShader, 1, &fs_ptr, nullptr);
